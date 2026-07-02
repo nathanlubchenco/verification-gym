@@ -109,23 +109,41 @@ def _test_install_targets(repo_dir: Path) -> list[str]:
             if c in groups:
                 args = [".", "--group", c]
                 break
-    for rp in ("requirements/tests.txt", "requirements-dev.txt", "requirements/dev.txt"):
+    for rp in ("requirements/tests.txt", "requirements-dev.txt", "requirements/dev.txt",
+               "requirements.txt"):
         if (repo_dir / rp).exists():
             args += ["-r", rp]
             break
+    # Only force our own pytest when nothing else will provide (and pin) one.
+    if args == ["."]:
+        args.append("pytest")
     return args
 
 
 def run_test_suite(repo_dir: Path, venv_dir: Path, timeout_s: int = TEST_TIMEOUT_S) -> tuple[bool, float, str]:
     """Create isolated venv, install package + test deps, run pytest. Returns
     (passed, seconds, note). Skips are fine; failures/errors are not (A8)."""
-    subprocess.run(["uv", "venv", "--quiet", str(venv_dir)], check=True, capture_output=True)
+    # Pin venvs to 3.12: candidate suites and their pinned plugins predate 3.14.
+    subprocess.run(
+        ["uv", "venv", "--quiet", "--clear", "-p", "3.12", str(venv_dir)],
+        check=True, capture_output=True,
+    )
     py = venv_dir / "bin" / "python"
     install = subprocess.run(
         ["uv", "pip", "install", "--quiet", "--python", str(py),
-         *_test_install_targets(repo_dir), "pytest"],
+         *_test_install_targets(repo_dir)],
         cwd=repo_dir, capture_output=True, text=True,
     )
+    if install.returncode == 0:
+        # ensure a pytest exists without overriding a pinned one
+        has_pytest = subprocess.run(
+            [str(py), "-c", "import pytest"], capture_output=True
+        ).returncode == 0
+        if not has_pytest:
+            install = subprocess.run(
+                ["uv", "pip", "install", "--quiet", "--python", str(py), "pytest"],
+                cwd=repo_dir, capture_output=True, text=True,
+            )
     if install.returncode != 0:
         return False, 0.0, f"install failed: {install.stderr[-400:]}"
     start = time.monotonic()
