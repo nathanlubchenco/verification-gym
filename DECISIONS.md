@@ -1,0 +1,29 @@
+# DECISIONS (append-only, numbered)
+
+Format: options considered → choice → reason → spec section interpreted.
+
+- **D1** (§4): *Python packaging.* Options: pinned requirements.txt vs `uv` + pyproject.toml. **Choice:** uv + `pyproject.toml` with `requires-python = ">=3.11"` and a committed `uv.lock`. Reason: uv is installed, gives deterministic lockfile (Priority 2, reproducibility) and manages the 3.11+ interpreter despite system Python being 3.14.
+
+- **D2** (§9, §1): *Default models.* `GYM_GENERATOR_MODEL`/`GYM_VERIFIER_MODEL` are unset. Options: claude-opus-4-8 ($5/$25 per MTok), claude-sonnet-5 ($3/$15), claude-haiku-4-5 ($1/$5). **Choice:** `claude-opus-4-8` for both generator and verifier, set as config-file defaults overridable by env vars. Reason: the mission (§1) asks about *frontier* models, and Opus 4.8 is the current frontier Opus-tier default; current Anthropic guidance is to default to it. Both being the same model is anticipated by §14.6 (LIMITATIONS entry). Nothing in the codebase hardcodes this (Priority 3).
+
+- **D3** (§9): *Default spend cap.* `GYM_SPEND_CAP_USD` unset. Options: very conservative ($25–50, forces scale-down below the operator's own design), or sized to the designed experiment (~920 review items + GEN generation ≈ forecast $100–115 on Opus 4.8). **Choice:** default `GYM_SPEND_CAP_USD=125`. Reason: the operator pre-specified n=50/class ≈ 920 items (§9), an experiment that inherently costs ≈$100 at frontier pricing — a default cap that forbids the operator's own design would silently rewrite §9. The cap's purpose is runaway protection; $125 caps at ~115% of forecast. Prominently flagged in PHASE0_REPORT.md; env var overrides. Interprets §9 (Phase 0 duty + scaling rule remains active if the real forecast exceeds this).
+
+- **D4** (§9): *Default seed.* `GYM_SEED` unset → default `20260702` (run date), in config.yaml, env-overridable.
+
+- **D5** (§5, CLEAN): *"Real merged PRs".* Options: GitHub API PR mining vs mainline git commits. **Choice:** mainline commits from repo history (commit message = PR-style description), filtered per §5 (no revert, no later fix touching same lines within 6 months; only commits old enough for the window to be observable). Reason: pure-git approach is deterministic, offline-reproducible, no rate limits (Priority 2); candidate repos merge PRs as mainline commits. See ASSUMPTIONS A5.
+
+- **D6** (§3, §5): *What diff carries an injected defect.* Options: (a) bare minimal diff containing only the mutation; (b) inject the defect into a real historical "carrier" commit, presenting carrier+defect as one change. **Choice:** (b) carrier-commit injection for MUT and GEN. Reason: (a) makes defective items trivially distinguishable from CLEAN items by diff shape/size alone — the verifier could learn "tiny unexplained diff ⇒ defect", a base-rate/shape leak violating §5's blindness requirement and Priority 1. Carrier commits are drawn from the same mined pool as CLEAN items (disjoint assignment, no reuse across arms).
+
+- **D7** (§4, §9): *Batch API vs direct calls.* Batch API gives 50% discount but adds latency (breaks `gym smoke` <15 min), complexity, and a second code path. **Choice:** direct Messages API calls in v0; forecast fits the cap without batching. Logged as a known optimization; performance is Priority 6.
+
+- **D8** (§6, Appendix A): *Structured output enforcement.* The API supports `output_config.format` (guaranteed-valid JSON). **Choice:** do NOT use it; parse free-form JSON with one re-ask then abstention, exactly as §6 specifies. Reason: §6 pre-specifies the malformed-JSON protocol (its abstention rate is itself a measurement); enforcing a schema server-side would silently redefine that protocol (operating rule 2). The fixed Appendix A prompt is used verbatim.
+
+- **D9** (§6): *"Location overlaps the ground-truth hunk(s)".* Define: GT locations are the changed-line ranges of the injected/known defect in **post-change file coordinates**, expanded by ±2 context lines; a reported `{file, start_line, end_line}` counts as overlapping iff same file (path-normalized) and line ranges intersect. Reason: a fixed, pre-specified rule applied uniformly to all arms; ±2 tolerates off-by-a-line reporting without crediting flags elsewhere in the file. Fixed before any scoring runs (Priority 1).
+
+- **D10** (§10, planning): *Plan structure.* One plan document covering architecture + Phase 0–1 tasks in detail; Phases 2–5 planned in detail at phase start (each phase report gates the next). Reason: later-phase details depend on Phase 0/1 outcomes (repo set, mined-commit yields); premature detail would be speculation. Matches §10's phase-gated structure.
+
+- **D11** (execution mode): *Subagent-per-task vs inline execution.* **Choice:** inline execution in this session. Reason: budget/quality control is centralized (spend cap enforcement, audit trail); subagents re-derive context at token cost with no reviewer available mid-run (operator is absent).
+
+- **D12** (§4, cache): *Cache key.* `(model, prompt_hash, seed)` per §4 with `prompt_hash = sha256(canonical_json(request_params))` including system/messages/max_tokens. Cache stored in SQLite `llm_cache`; `gym reproduce` and re-runs read cache-only. The Anthropic API has no sampling seed parameter (and Opus 4.8 rejects temperature), so `seed` in the key is the run seed — it namespaces runs; determinism of re-runs comes from the cache, not the model.
+
+- **D13** (§5, CLEAN filter): *"Later bug-fix commit touching the same lines".* Implement as: for candidate commit C, scan commits within 6 months after C whose message matches fix-keyword heuristics (fix/bug/regression/crash/CVE/revert + issue refs); C is rejected if any such commit modifies the same file with a hunk overlapping C's post-image hunks (±3 lines). Reverts detected via "revert" + subject/hash reference. Reason: line-accurate, pure-git, deterministic; documented as one of the CLEAN-arm limitations.

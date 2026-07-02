@@ -1,0 +1,37 @@
+# Verification gym configuration. Env vars GYM_SEED, GYM_GENERATOR_MODEL,
+# GYM_VERIFIER_MODEL, GYM_SPEND_CAP_USD override the values here (see DECISIONS D2-D4).
+seed: 20260702
+generator_model: claude-opus-4-8
+verifier_model: claude-opus-4-8
+spend_cap_usd: 125.0
+
+data_dir: data
+events_dir: events
+reports_dir: reports
+
+# Review payloads larger than this are excluded at sampling time, never truncated
+# (ASSUMPTIONS A7). ~110k chars ~= 30k tokens.
+payload_budget_chars: 110000
+
+targets:
+  n_per_class: 50
+  floor_per_class: 30
+  clean_fraction: 0.40
+
+# USD per million tokens (cached from Anthropic pricing, 2026-07-02).
+pricing:
+  claude-opus-4-8: {input_per_mtok: 5.0, output_per_mtok: 25.0}
+  claude-sonnet-5: {input_per_mtok: 3.0, output_per_mtok: 15.0}
+  claude-haiku-4-5: {input_per_mtok: 1.0, output_per_mtok: 5.0}
+
+# Candidate repos per HANDOFF §8, in validation priority order. `gym repos`
+# validates each and pins commits; validation results recorded in db + WORKLOG.
+repos:
+  - {name: click,    url: "https://github.com/pallets/click",        pin: null}
+  - {name: jinja2,   url: "https://github.com/pallets/jinja",        pin: null}
+  - {name: tenacity, url: "https://github.com/jd/tenacity",          pin: null}
+  - {name: attrs,    url: "https://github.com/python-attrs/attrs",   pin: null}
+  - {name: flask,    url: "https://github.com/pallets/flask",        pin: null}
+  - {name: rich,     url: "https://github.com/Textualize/rich",      pin: null}
+  - {name: httpx,    url: "https://github.com/encode/httpx",         pin: null}
+  - {name: requests, url: "https://github.com/psf/requests",         pin: null}
