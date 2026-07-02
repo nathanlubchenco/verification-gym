@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import subprocess
 import time
+import tomllib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,36 +53,67 @@ def count_loc(repo_dir: Path) -> int:
     return total
 
 
+def _load_pyproject(repo_dir: Path) -> dict:
+    pp = repo_dir / "pyproject.toml"
+    if not pp.exists():
+        return {}
+    try:
+        return tomllib.loads(pp.read_text(errors="replace"))
+    except tomllib.TOMLDecodeError:
+        return {}
+
+
 def check_license(repo_dir: Path) -> str:
-    """Return matched permissive license name, or '' if none found."""
-    for name in ("LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst", "COPYING"):
+    """Return matched permissive license name, or '' if none found.
+
+    Checks pyproject SPDX declaration first, then license-file contents —
+    BSD/MIT bodies often never name themselves, so match canonical clauses.
+    """
+    lic = _load_pyproject(repo_dir).get("project", {}).get("license")
+    lic_text = lic if isinstance(lic, str) else (lic or {}).get("text", "")
+    m = PERMISSIVE.search(lic_text or "")
+    if m:
+        return m.group(1).upper()
+    for name in ("LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst", "COPYING",
+                 "LICENSE.APACHE", "LICENSE.BSD", "LICENSE.MIT"):
         p = repo_dir / name
-        if p.exists():
-            head = p.read_text(errors="replace")[:2000]
-            m = PERMISSIVE.search(head)
-            if m:
-                return m.group(1).upper()
+        if not p.exists():
+            continue
+        head = p.read_text(errors="replace")[:2500]
+        if "Apache License" in head:
+            return "APACHE"
+        if "Permission is hereby granted, free of charge" in head:
+            return "MIT"
+        if "Redistribution and use in source and binary forms" in head:
+            return "BSD"
+        m = PERMISSIVE.search(head)
+        if m:
+            return m.group(1).upper()
     return ""
 
 
 def _test_install_targets(repo_dir: Path) -> list[str]:
-    """Package spec(s) to install for running the suite: the package itself with a
-    test extra if one is declared, plus pallets-style requirements/tests.txt."""
-    extras = []
-    pyproject = repo_dir / "pyproject.toml"
-    if pyproject.exists():
-        text = pyproject.read_text(errors="replace")
-        for candidate in ("tests", "test", "testing", "dev"):
-            if re.search(rf"^\s*{candidate}\s*=\s*\[", text, re.MULTILINE):
-                extras.append(candidate)
+    """uv pip install args for the package + its test deps: prefer a declared
+    test extra, then a PEP 735 dependency group, then requirements files."""
+    data = _load_pyproject(repo_dir)
+    extras = data.get("project", {}).get("optional-dependencies", {})
+    groups = data.get("dependency-groups", {})
+    candidates = ("tests", "test", "testing", "dev")
+    args = ["."]
+    for c in candidates:
+        if c in extras:
+            args = [f".[{c}]"]
+            break
+    else:
+        for c in candidates:
+            if c in groups:
+                args = [".", "--group", c]
                 break
-    target = f".[{extras[0]}]" if extras else "."
-    reqs = []
     for rp in ("requirements/tests.txt", "requirements-dev.txt", "requirements/dev.txt"):
         if (repo_dir / rp).exists():
-            reqs = ["-r", rp]
+            args += ["-r", rp]
             break
-    return [target, *reqs]
+    return args
 
 
 def run_test_suite(repo_dir: Path, venv_dir: Path, timeout_s: int = TEST_TIMEOUT_S) -> tuple[bool, float, str]:

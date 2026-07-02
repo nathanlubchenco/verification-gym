@@ -24,3 +24,34 @@ def test_check_license_missing(tmp_path):
 def test_check_license_gpl_rejected(tmp_path):
     (tmp_path / "LICENSE").write_text("GNU GENERAL PUBLIC LICENSE Version 3")
     assert check_license(tmp_path) == ""
+
+
+def test_check_license_bsd_body_without_name(tmp_path):
+    (tmp_path / "LICENSE.txt").write_text(
+        "Copyright 2014 Pallets\n\nRedistribution and use in source and binary "
+        "forms, with or without modification, are permitted..."
+    )
+    assert check_license(tmp_path) == "BSD"
+
+
+def test_check_license_spdx_in_pyproject(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\nversion = "0"\nlicense = "BSD-3-Clause"\n'
+    )
+    assert check_license(tmp_path) == "BSD"
+
+
+def test_install_targets_prefers_extra_then_group(tmp_path):
+    from gym.repos import _test_install_targets
+
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\nversion = "0"\n'
+        "[dependency-groups]\ntests = [\"pytest\"]\n"
+    )
+    assert _test_install_targets(tmp_path) == [".", "--group", "tests"]
+
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\nversion = "0"\n'
+        "[project.optional-dependencies]\ntests = [\"pytest\"]\n"
+    )
+    assert _test_install_targets(tmp_path) == [".[tests]"]
