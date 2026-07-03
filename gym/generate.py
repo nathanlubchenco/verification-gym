@@ -76,17 +76,20 @@ def ensure_pool(cfg: Config, conn: sqlite3.Connection, quota_per_repo: int,
     return total
 
 
-def assign_pool(cfg: Config, conn: sqlite3.Connection) -> dict[str, int]:
+def assign_pool(cfg: Config, conn: sqlite3.Connection,
+                want: dict[str, int] | None = None) -> dict[str, int]:
     """Seeded disjoint assignment of pool commits to arms (D6: carriers and
     clean items come from the same distribution). Idempotent: only assigns
-    currently-unassigned rows, honoring global category shortfalls."""
-    needs = compute_needs(cfg)
-    want = {
-        "CLEAN": int(needs.clean * 1.15),
-        "MUT_CARRIER": needs.mut_carriers,
-        "GEN_CARRIER": needs.gen_carriers,
-        "CANARY_CARRIER": needs.canary_carriers,
-    }
+    currently-unassigned rows. If the pool is scarce, shortfalls are scaled
+    proportionally so no category is starved outright."""
+    if want is None:
+        needs = compute_needs(cfg)
+        want = {
+            "CLEAN": int(needs.clean * 1.15),
+            "MUT_CARRIER": needs.mut_carriers,
+            "GEN_CARRIER": needs.gen_carriers,
+            "CANARY_CARRIER": needs.canary_carriers,
+        }
     # used CLEAN commits are re-tagged 'CLEAN_USED:<item>'; they still count
     have = {k: conn.execute(
         "SELECT COUNT(*) c FROM commit_pool WHERE assigned_to=? OR assigned_to LIKE ?",
@@ -98,12 +101,20 @@ def assign_pool(cfg: Config, conn: sqlite3.Connection) -> dict[str, int]:
     rng = random.Random(f"{cfg.seed}:assign")
     rows = list(rows)
     rng.shuffle(rows)
+    missing = {k: max(0, want[k] - have.get(k, 0)) for k in want}
+    total_missing = sum(missing.values())
+    if total_missing > len(rows) and total_missing > 0:
+        scale = len(rows) / total_missing
+        missing = {k: (max(1, int(v * scale)) if v > 0 else 0)
+                   for k, v in missing.items()}
     i = 0
     for cat in ("CLEAN", "MUT_CARRIER", "GEN_CARRIER", "CANARY_CARRIER"):
-        while have[cat] < want[cat] and i < len(rows):
+        take = missing.get(cat, 0)
+        while take > 0 and i < len(rows):
             conn.execute("UPDATE commit_pool SET assigned_to=? WHERE repo=? AND sha=?",
                          (cat, rows[i]["repo"], rows[i]["sha"]))
-            have[cat] += 1
+            have[cat] = have.get(cat, 0) + 1
+            take -= 1
             i += 1
     conn.commit()
     return have
