@@ -98,24 +98,14 @@ def blame_introducers(repo_dir: Path, fix: gitrepo.Commit):
         if not deleted:
             continue
         try:
-            blamed = g._calculate_last_commits(commit, [mod])  # noqa: SLF001
+            blamed = g.get_commits_last_modified_lines(commit, mod)
         except Exception:
-            blamed = {}
-        # pydriller public API variant
-        if not blamed:
-            try:
-                blamed = g.get_commits_last_modified_lines(commit, mod)
-            except Exception:
-                continue
-        deleted_contents = {content.strip() for _, content in deleted}
-        for path, shas in blamed.items():
+            continue
+        deleted_contents = sorted({content.strip() for _, content in deleted})
+        key = mod.old_path or mod.new_path
+        for _path, shas in blamed.items():
             for sha in shas:
-                out.setdefault(sha, {}).setdefault(mod.old_path or path, [])
-        # attach the deleted line contents for GT mapping
-        for sha in out:
-            key = mod.old_path or mod.new_path
-            if key in out[sha]:
-                out[sha][key] = sorted(deleted_contents)
+                out.setdefault(sha, {})[key] = deleted_contents
     return out
 
 
