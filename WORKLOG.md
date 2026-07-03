@@ -10,3 +10,10 @@
 - **17:55** Task 0.1–0.2 done: skeleton, config, git plumbing, db schema, repo validation. Three validation rounds needed — dead ends: (1) license detector missed BSD/SPDX (Pallets license bodies never say "BSD"); (2) `uv venv` failed on existing dirs (needed --clear); (3) system py3.14 broke older pinned test plugins (pinned venvs to 3.12); (4) my unpinned pytest overrode repo-pinned test deps. Result: click, jinja2, attrs, requests PASS; tenacity (LOC 1827 < 5k), flask/rich/httpx (red suites) rejected — logged substitutions per §8.
 - **18:05** LLM client (cache/cap/ledger), ids, difftools, mine.py (CLEAN filters D13), payload.py (Appendix A verbatim) built test-first; 26 tests green. Dead end: requests repo has a commit with corrupt timezone `+518:00` — added parse_git_date fallback.
 - **18:10** Phase 0 forecast from 40 real payloads: mean 8.4k tokens/review (2.68 chars/token measured via free count_tokens); forecast ≈$120 < $125 cap. PHASE0_REPORT.md written. Spend: $0.00. GO Phase 1.
+
+## 2026-07-03
+
+- **Phase 1 complete.** Review/score/leakcheck/report/smoke/reproduce all wired; smoke green 52s, $0.77. Full CLEAN (433) + canary (24) generation from mined pool (846 commits, 4 repos).
+- **Dead end (important):** first §14.1 canary gate FAILED at 21/24 (87.5%). Diagnosis: eq_to_neq and big_constant canary ops are MUT-grade subtle, and two misses landed in test files; a third was found-but-mislocalized (D9 rule working as designed). Fix: canary ops restricted to invert_if/return_none, test/example files excluded; purge + regenerate + re-review → 24/24 PASS. Metric definitions untouched (rule 2).
+- Null test: 6/30 clean items flagged (20% FP on this sample) — machinery sane; the level itself is a Phase 5 result.
+- SZZ + GEN arm modules written and unit-tested ahead of their phases. Spend: $6.12.

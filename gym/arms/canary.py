@@ -42,17 +42,29 @@ def _big_constant(line: str) -> str | None:
     return line[:m.start(1)] + str(val + 1000) + line[m.end(1):]
 
 
+# Only genuinely blatant ops qualify as canaries. eq_to_neq/big_constant were
+# tried and removed: landing in test files they read as MUT-grade subtlety and
+# dragged the §14.1 gate to 87.5% (see WORKLOG 2026-07-03). They remain below
+# for reference/tests but are not used for canary generation.
 CANARY_OPS = [
     ("invert_if", _invert_if),
     ("return_none", _return_none),
+]
+RETIRED_OPS = [
     ("eq_to_neq", _eq_to_neq),
     ("big_constant", _big_constant),
 ]
 
 
+_NON_SOURCE = re.compile(r"(^|/)(tests?|examples?|docs?)(/|_)|_test\.py$|^test_")
+
+
 def find_canary_edit(path: str, file_text: str, rng: random.Random) -> tuple[str, Edit] | None:
     """Pick a blatant, uniquely-applicable single-line break, seeded. Returns
-    (op_name, Edit) or None if the file offers no usable site."""
+    (op_name, Edit) or None if the file offers no usable site. Test/example
+    files are excluded: a broken line there is not blatant to a reviewer."""
+    if _NON_SOURCE.search(path):
+        return None
     lines = file_text.split("\n")
     sites: list[tuple[str, str, str]] = []
     for line in lines:
