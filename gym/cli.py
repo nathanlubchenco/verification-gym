@@ -70,7 +70,7 @@ def _generate_into(cfg: Config, conn, arms: list[str], progress=print) -> None:
         szz.generate_szz(cfg, conn, progress=progress)
 
 
-AVAILABLE_ARMS = ["clean", "canary"]  # extended as phases land: mut, gen, szz
+AVAILABLE_ARMS = ["clean", "canary", "mut"]  # extended as phases land: gen, szz
 
 
 def cmd_generate(args) -> int:
