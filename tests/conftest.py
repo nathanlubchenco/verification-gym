@@ -41,7 +41,12 @@ def fixture_repo(tmp_path):
         "--date", "2021-06-01T00:00:00",
     )
 
-    (repo / "other.py").write_text("VALUE = 42\n")
+    (repo / "other.py").write_text(
+        "VALUE = 42\n\n"
+        "def pick(v):\n"
+        "    if v:\n        return VALUE\n"
+        "    return 0\n"
+    )
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "chore: add constant", "--date", "2021-07-01T00:00:00")
 
