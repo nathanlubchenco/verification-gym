@@ -1,0 +1,89 @@
+{
+ "abstention": {
+  "n": 0,
+  "rate": 0.0
+ },
+ "arm_gap_gen_minus_szz": {},
+ "auroc_per_class": {},
+ "brier": 0.15185333333333334,
+ "calibration_bins": [
+  {
+   "bin_hi": 0.1,
+   "bin_lo": 0.0,
+   "frac_defective": 0.0,
+   "mean_p": 0.05666666666666667,
+   "n": 6
+  },
+  {
+   "bin_hi": 0.2,
+   "bin_lo": 0.1,
+   "frac_defective": 0.0,
+   "mean_p": 0.13,
+   "n": 12
+  },
+  {
+   "bin_hi": 0.3,
+   "bin_lo": 0.2,
+   "frac_defective": 0.0,
+   "mean_p": 0.24500000000000002,
+   "n": 4
+  },
+  {
+   "bin_hi": 0.4,
+   "bin_lo": 0.3,
+   "frac_defective": 0.0,
+   "mean_p": 0.35,
+   "n": 2
+  },
+  {
+   "bin_hi": 0.8,
+   "bin_lo": 0.7,
+   "frac_defective": 0.0,
+   "mean_p": 0.71,
+   "n": 2
+  },
+  {
+   "bin_hi": 0.9,
+   "bin_lo": 0.8,
+   "frac_defective": 0.0,
+   "mean_p": 0.82,
+   "n": 3
+  },
+  {
+   "bin_hi": 1.0,
+   "bin_lo": 0.9,
+   "frac_defective": 0.0,
+   "mean_p": 0.9,
+   "n": 1
+  }
+ ],
+ "canary_gate": {
+  "detected": 24,
+  "n": 24,
+  "pass": true,
+  "rate": 1.0
+ },
+ "cost_per_review": {
+  "CLEAN": {
+   "mean_cost_usd": 0.060638,
+   "mean_latency_ms": 5088.5,
+   "mean_tokens_in": 10795.1,
+   "mean_tokens_out": 266.5,
+   "n": 30
+  }
+ },
+ "false_positive": {
+  "ci95": [
+   0.09504978102401235,
+   0.37306047381027446
+  ],
+  "fp": 6,
+  "n_clean": 30,
+  "rate": 0.2
+ },
+ "localization_precision": null,
+ "misdirected_flag_rate": null,
+ "n_items": 30,
+ "per_arm": {},
+ "per_class_arm": {}
+}
