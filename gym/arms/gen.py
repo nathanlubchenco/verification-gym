@@ -80,7 +80,9 @@ SYSTEM_PROMPT = (
 )
 
 GEN_MAX_TOKENS = 2500
-MAX_ATTEMPTS_PER_CLASS_FACTOR = 4   # attempts budget = factor * n_per_class
+# attempts budget = factor * n_per_class; 2.4 keeps GEN's worst-case API spend
+# within the Phase 0 forecast envelope while allowing ~58% rejection headroom
+MAX_ATTEMPTS_PER_CLASS_FACTOR = 2.4
 SUITE_TIMEOUT_S = 150
 
 _TEST_FILE = re.compile(r"(^|/)test(s)?(/|_)|_test\.py$")

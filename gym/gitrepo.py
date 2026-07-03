@@ -28,11 +28,21 @@ class GitError(RuntimeError):
 
 
 def run_git(repo: Path | str, *args: str, check: bool = True) -> str:
-    proc = subprocess.run(
-        ["git", "-C", str(repo), "-c", "core.pager=cat", *args],
-        capture_output=True, text=True,
-    )
-    if check and proc.returncode != 0:
+    for attempt in range(4):
+        proc = subprocess.run(
+            ["git", "-C", str(repo), "-c", "core.pager=cat", *args],
+            capture_output=True, text=True,
+        )
+        if proc.returncode == 0:
+            return proc.stdout
+        # transient lock contention between parallel generator processes
+        if "lock" in proc.stderr.lower() and attempt < 3:
+            import time
+
+            time.sleep(0.5 * (attempt + 1))
+            continue
+        break
+    if check:
         raise GitError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
     return proc.stdout
 
