@@ -1,60 +1,114 @@
 {
+ "_inferred": "All statements below are interpretation. The computed numbers are in the\nMEASURED section above; the caveats that could invalidate these readings are in\nLIMITATIONS.md (read it before quoting anything).\n\n**1. The instrument's answer to \"is verification easier than generation?\" is:\nit depends entirely on whose defects you're verifying.** The same verifier,\nsame prompt, same repos: 89% detection on mechanical mutations (MUT), 59% on\nsubtle model-written defects (GEN), 27% on real historical defects (SZZ).\nBenchmarks built on injected defects \u2014 most of the literature \u2014 would report\nthis verifier as excellent; the real-defect anchor says two of three\nproduction-grade bugs sail through. If one number is the takeaway, it is the\nSZZ 26.7% [20.2, 34.3].\n\n**2. The arm gap is large and positive (GEN \u2212 SZZ \u2248 +42 to +48 points at\nmatched classes), which is the direction self-distribution bias predicts.**\nThe verifier detects the generator's wrong-edge-case defects (GEN-01: 70%) far\nmore reliably than real wrong-edge-case defects (SZZ/GEN-01: 28%), same class\nlabel, same repos. Two explanations are confounded in this run and cannot be\nseparated until the cross-model matrix is run: (a) the verifier shares the\ngenerator's defect distribution (they are the same model); (b) real defects\nare intrinsically harder \u2014 they survive human review + CI once already, and\nthe strict location rule punishes SZZ items hardest (misdirected-flag rate on\nSZZ/GEN-01 is 30%, i.e. the verifier often senses trouble but points at the\nwrong lines).\n\n**3. Test-weakening (GEN-03, the operator's priority class) is the verifier's\nworst injected-defect class at 24% \u2014 worse than every other GEN class by ~35\npoints.** Loosened assertions and over-mocking read as normal test\nmaintenance. Given GEN-03's mapping onto proxy-metric gaming, this is the\nmost actionable per-class result in the run: if you use an LLM reviewer to\nguard against eval/test manipulation, this configuration largely won't.\n\n**4. The false-alarm cost is material: ~20% of presumed-clean merged changes\nget flagged.** Some fraction is residual true defects in \"presumed clean\"\n(the filter is a heuristic; see LIMITATIONS #2), so 19.9% is an upper bound \u2014\nbut even the lower confidence bound (16.4%) implies roughly one flag per six\nclean PRs, which prices this verifier configuration out of naive\nblock-on-flag deployment.\n\n**5. Within MUT, the ordering is informative:** logic swaps, arg swaps, and\nswallowed exceptions are near-ceiling (94\u201396%) while boundary/off-by-one is\nthe softest mutation class (74%) \u2014 off-by-one plausibly reads as intentional\n(`<` vs `<=` both look defensible without spec context). Boundary errors are\nalso a large real-bug category, consistent with the low SZZ rates.\n\n**6. Calibration is mediocre but not useless** (Brier 0.136; AUROC per class\nin the table). Confidence carries signal, but the ~20% FP rate at high stated\nconfidence means confidence thresholds alone won't rescue precision.\n\n**Follow-ups this instrument is built for (not run here):** the cross-model\nmatrix (generator \u2260 verifier) to de-confound reading #2; verifier-protocol\nablations (thinking budgets, self-consistency, diff-only context) via the \u00a76\nconfig hooks; and SPC monitoring of these rates over model generations via\nthe gym-events/1 stream.",
  "abstention": {
   "n": 0,
   "rate": 0.0
  },
- "arm_gap_gen_minus_szz": {},
- "auroc_per_class": {},
- "brier": 0.15185333333333334,
+ "arm_gap_gen_minus_szz": {
+  "GEN-01": {
+   "ci95": [
+    0.2487714987714988,
+    0.597051597051597
+   ],
+   "delta": 0.4207616707616708,
+   "n_gen": 44,
+   "n_szz": 74
+  },
+  "GEN-02": {
+   "ci95": [
+    0.26797385620915026,
+    0.6745098039215686
+   ],
+   "delta": 0.48235294117647054,
+   "n_gen": 45,
+   "n_szz": 17
+  }
+ },
+ "auroc_per_class": {
+  "GEN-01": 0.830048537988805,
+  "GEN-02": 0.8549504581688148,
+  "GEN-03": 0.745958429561201,
+  "GEN-04": 0.8495901824933206,
+  "GEN-05": 0.8244585820732929,
+  "GEN-06": 0.8610623556581987,
+  "MUT-01": 0.8959213909102793,
+  "MUT-02": 0.9803015894579541,
+  "MUT-03": 0.9590839107005389,
+  "MUT-04": 0.9414571441021395,
+  "MUT-05": 0.9319884997879059,
+  "OTHER": 0.8851039260969977
+ },
+ "brier": 0.15934009174311928,
  "calibration_bins": [
   {
    "bin_hi": 0.1,
    "bin_lo": 0.0,
-   "frac_defective": 0.0,
-   "mean_p": 0.05666666666666667,
-   "n": 6
+   "frac_defective": 0.029197080291970802,
+   "mean_p": 0.05226277372262774,
+   "n": 137
   },
   {
    "bin_hi": 0.2,
    "bin_lo": 0.1,
-   "frac_defective": 0.0,
-   "mean_p": 0.13,
-   "n": 12
+   "frac_defective": 0.2570093457943925,
+   "mean_p": 0.1389252336448598,
+   "n": 214
   },
   {
    "bin_hi": 0.3,
    "bin_lo": 0.2,
-   "frac_defective": 0.0,
-   "mean_p": 0.24500000000000002,
-   "n": 4
+   "frac_defective": 0.5943396226415094,
+   "mean_p": 0.24396226415094344,
+   "n": 106
   },
   {
    "bin_hi": 0.4,
    "bin_lo": 0.3,
-   "frac_defective": 0.0,
-   "mean_p": 0.35,
-   "n": 2
+   "frac_defective": 0.7916666666666666,
+   "mean_p": 0.34125,
+   "n": 48
+  },
+  {
+   "bin_hi": 0.5,
+   "bin_lo": 0.4,
+   "frac_defective": 0.8181818181818182,
+   "mean_p": 0.41545454545454547,
+   "n": 11
+  },
+  {
+   "bin_hi": 0.6,
+   "bin_lo": 0.5,
+   "frac_defective": 0.5,
+   "mean_p": 0.55,
+   "n": 8
+  },
+  {
+   "bin_hi": 0.7,
+   "bin_lo": 0.6,
+   "frac_defective": 0.6363636363636364,
+   "mean_p": 0.6224242424242424,
+   "n": 33
   },
   {
    "bin_hi": 0.8,
    "bin_lo": 0.7,
-   "frac_defective": 0.0,
-   "mean_p": 0.71,
-   "n": 2
+   "frac_defective": 0.740506329113924,
+   "mean_p": 0.7351898734177215,
+   "n": 158
   },
   {
    "bin_hi": 0.9,
    "bin_lo": 0.8,
-   "frac_defective": 0.0,
-   "mean_p": 0.82,
-   "n": 3
+   "frac_defective": 0.8901734104046243,
+   "mean_p": 0.8473410404624278,
+   "n": 173
   },
   {
    "bin_hi": 1.0,
    "bin_lo": 0.9,
-   "frac_defective": 0.0,
-   "mean_p": 0.9,
-   "n": 1
+   "frac_defective": 0.9504950495049505,
+   "mean_p": 0.9421782178217821,
+   "n": 202
   }
  ],
  "canary_gate": {
@@ -65,25 +119,449 @@
  },
  "cost_per_review": {
   "CLEAN": {
-   "mean_cost_usd": 0.060638,
-   "mean_latency_ms": 5088.5,
-   "mean_tokens_in": 10795.1,
-   "mean_tokens_out": 266.5,
-   "n": 30
+   "mean_cost_usd": 0.03615295034642032,
+   "mean_latency_ms": 352.55196304849886,
+   "mean_tokens_in": 12116.969976905311,
+   "mean_tokens_out": 300.7921478060046,
+   "n": 433
+  },
+  "GEN-01": {
+   "mean_cost_usd": 0.052110995762711866,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 17737.745762711864,
+   "mean_tokens_out": 621.3305084745763,
+   "n": 118
+  },
+  "GEN-02": {
+   "mean_cost_usd": 0.03898270161290322,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 12797.838709677419,
+   "mean_tokens_out": 559.0483870967741,
+   "n": 62
+  },
+  "GEN-03": {
+   "mean_cost_usd": 0.04651672727272727,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 15892.963636363636,
+   "mean_tokens_out": 542.7454545454545,
+   "n": 55
+  },
+  "GEN-04": {
+   "mean_cost_usd": 0.04016857843137255,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 13508.117647058823,
+   "mean_tokens_out": 511.8627450980392,
+   "n": 51
+  },
+  "GEN-05": {
+   "mean_cost_usd": 0.037894150943396224,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 12817.188679245282,
+   "mean_tokens_out": 468.0943396226415,
+   "n": 53
+  },
+  "GEN-06": {
+   "mean_cost_usd": 0.040430799999999996,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 13302.32,
+   "mean_tokens_out": 574.0,
+   "n": 50
+  },
+  "MUT-01": {
+   "mean_cost_usd": 0.03874900943396227,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 13396.67924528302,
+   "mean_tokens_out": 420.58490566037733,
+   "n": 53
+  },
+  "MUT-02": {
+   "mean_cost_usd": 0.023172745098039217,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 7658.411764705882,
+   "mean_tokens_out": 322.1372549019608,
+   "n": 51
+  },
+  "MUT-03": {
+   "mean_cost_usd": 0.024476416666666667,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 8282.316666666668,
+   "mean_tokens_out": 301.65,
+   "n": 60
+  },
+  "MUT-04": {
+   "mean_cost_usd": 0.03784476415094339,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 13560.547169811322,
+   "mean_tokens_out": 315.47169811320754,
+   "n": 53
+  },
+  "MUT-05": {
+   "mean_cost_usd": 0.0457380612244898,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 16285.122448979591,
+   "mean_tokens_out": 402.0204081632653,
+   "n": 49
+  },
+  "OTHER": {
+   "mean_cost_usd": 0.0090575,
+   "mean_latency_ms": 0.0,
+   "mean_tokens_in": 2690.5,
+   "mean_tokens_out": 186.5,
+   "n": 2
   }
  },
  "false_positive": {
   "ci95": [
-   0.09504978102401235,
-   0.37306047381027446
+   0.1637581585016007,
+   0.23877127093002853
   ],
-  "fp": 6,
-  "n_clean": 30,
-  "rate": 0.2
+  "fp": 86,
+  "n_clean": 433,
+  "rate": 0.19861431870669746
  },
- "localization_precision": null,
- "misdirected_flag_rate": null,
- "n_items": 30,
- "per_arm": {},
- "per_class_arm": {}
+ "localization_precision": 0.8477366255144033,
+ "misdirected_flag_rate": 0.1126331811263318,
+ "n_items": 1090,
+ "per_arm": {
+  "GEN": {
+   "abstained": 0,
+   "ci95": [
+    0.528576727941004,
+    0.6462474064191545
+   ],
+   "detected": 156,
+   "low_power": false,
+   "misdirected_flag": 20,
+   "missed": 89,
+   "n": 265,
+   "rate": 0.5886792452830188
+  },
+  "MUT": {
+   "abstained": 0,
+   "ci95": [
+    0.8472343527581727,
+    0.9256210142749088
+   ],
+   "detected": 216,
+   "low_power": false,
+   "misdirected_flag": 8,
+   "missed": 18,
+   "n": 242,
+   "rate": 0.8925619834710744
+  },
+  "SZZ": {
+   "abstained": 0,
+   "ci95": [
+    0.2023705573107324,
+    0.342615974290603
+   ],
+   "detected": 40,
+   "low_power": false,
+   "misdirected_flag": 46,
+   "missed": 64,
+   "n": 150,
+   "rate": 0.26666666666666666
+  }
+ },
+ "per_class_arm": {
+  "GEN/GEN-01": {
+   "abstained": 0,
+   "ci95": [
+    0.5577952061434273,
+    0.818446391127567
+   ],
+   "detected": 31,
+   "low_power": false,
+   "misdirected_flag": 2,
+   "missed": 11,
+   "n": 44,
+   "rate": 0.7045454545454546
+  },
+  "GEN/GEN-02": {
+   "abstained": 0,
+   "ci95": [
+    0.4545159420914473,
+    0.7297532055204246
+   ],
+   "detected": 27,
+   "low_power": false,
+   "misdirected_flag": 5,
+   "missed": 13,
+   "n": 45,
+   "rate": 0.6
+  },
+  "GEN/GEN-03": {
+   "abstained": 0,
+   "ci95": [
+    0.14297252401872207,
+    0.3741294937519236
+   ],
+   "detected": 12,
+   "low_power": false,
+   "misdirected_flag": 7,
+   "missed": 31,
+   "n": 50,
+   "rate": 0.24
+  },
+  "GEN/GEN-04": {
+   "abstained": 0,
+   "ci95": [
+    0.5054955435372689,
+    0.7844138263335655
+   ],
+   "detected": 27,
+   "low_power": false,
+   "misdirected_flag": 1,
+   "missed": 13,
+   "n": 41,
+   "rate": 0.6585365853658537
+  },
+  "GEN/GEN-05": {
+   "abstained": 0,
+   "ci95": [
+    0.48866107278891047,
+    0.7621666587250857
+   ],
+   "detected": 28,
+   "low_power": false,
+   "misdirected_flag": 3,
+   "missed": 13,
+   "n": 44,
+   "rate": 0.6363636363636364
+  },
+  "GEN/GEN-06": {
+   "abstained": 0,
+   "ci95": [
+    0.606563693455418,
+    0.8617514424897758
+   ],
+   "detected": 31,
+   "low_power": false,
+   "misdirected_flag": 2,
+   "missed": 8,
+   "n": 41,
+   "rate": 0.7560975609756098
+  },
+  "MUT/MUT-01": {
+   "abstained": 0,
+   "ci95": [
+    0.6044657801100008,
+    0.8412862034863262
+   ],
+   "detected": 37,
+   "low_power": false,
+   "misdirected_flag": 3,
+   "missed": 10,
+   "n": 50,
+   "rate": 0.74
+  },
+  "MUT/MUT-02": {
+   "abstained": 0,
+   "ci95": [
+    0.8653966212204534,
+    0.9889613473391734
+   ],
+   "detected": 48,
+   "low_power": false,
+   "misdirected_flag": 1,
+   "missed": 1,
+   "n": 50,
+   "rate": 0.96
+  },
+  "MUT/MUT-03": {
+   "abstained": 0,
+   "ci95": [
+    0.8378265662912299,
+    0.9793854036353695
+   ],
+   "detected": 47,
+   "low_power": false,
+   "misdirected_flag": 0,
+   "missed": 3,
+   "n": 50,
+   "rate": 0.94
+  },
+  "MUT/MUT-04": {
+   "abstained": 0,
+   "ci95": [
+    0.8517222081611939,
+    0.9877261309595557
+   ],
+   "detected": 43,
+   "low_power": false,
+   "misdirected_flag": 2,
+   "missed": 0,
+   "n": 45,
+   "rate": 0.9555555555555556
+  },
+  "MUT/MUT-05": {
+   "abstained": 0,
+   "ci95": [
+    0.7482578662713097,
+    0.9401547721979753
+   ],
+   "detected": 41,
+   "low_power": false,
+   "misdirected_flag": 2,
+   "missed": 4,
+   "n": 47,
+   "rate": 0.8723404255319149
+  },
+  "SZZ/GEN-01": {
+   "abstained": 0,
+   "ci95": [
+    0.19373406470259974,
+    0.3951746935963046
+   ],
+   "detected": 21,
+   "low_power": false,
+   "misdirected_flag": 22,
+   "missed": 31,
+   "n": 74,
+   "rate": 0.28378378378378377
+  },
+  "SZZ/GEN-02": {
+   "abstained": 0,
+   "ci95": [
+    0.03287908001292092,
+    0.3433684249770991
+   ],
+   "detected": 2,
+   "low_power": true,
+   "misdirected_flag": 5,
+   "missed": 10,
+   "n": 17,
+   "rate": 0.11764705882352941
+  },
+  "SZZ/GEN-03": {
+   "abstained": 0,
+   "ci95": [
+    0.0,
+    0.43449149475208104
+   ],
+   "detected": 0,
+   "low_power": true,
+   "misdirected_flag": 2,
+   "missed": 3,
+   "n": 5,
+   "rate": 0.0
+  },
+  "SZZ/GEN-04": {
+   "abstained": 0,
+   "ci95": [
+    0.16817758120350967,
+    0.6873304525498135
+   ],
+   "detected": 4,
+   "low_power": true,
+   "misdirected_flag": 4,
+   "missed": 2,
+   "n": 10,
+   "rate": 0.4
+  },
+  "SZZ/GEN-05": {
+   "abstained": 0,
+   "ci95": [
+    0.06322376231222723,
+    0.5474166563271946
+   ],
+   "detected": 2,
+   "low_power": true,
+   "misdirected_flag": 3,
+   "missed": 4,
+   "n": 9,
+   "rate": 0.2222222222222222
+  },
+  "SZZ/GEN-06": {
+   "abstained": 0,
+   "ci95": [
+    0.06322376231222723,
+    0.5474166563271946
+   ],
+   "detected": 2,
+   "low_power": true,
+   "misdirected_flag": 2,
+   "missed": 5,
+   "n": 9,
+   "rate": 0.2222222222222222
+  },
+  "SZZ/MUT-01": {
+   "abstained": 0,
+   "ci95": [
+    0.0,
+    0.5615060804490177
+   ],
+   "detected": 0,
+   "low_power": true,
+   "misdirected_flag": 1,
+   "missed": 2,
+   "n": 3,
+   "rate": 0.0
+  },
+  "SZZ/MUT-02": {
+   "abstained": 0,
+   "ci95": [
+    0.20654329147389294,
+    1.0
+   ],
+   "detected": 1,
+   "low_power": true,
+   "misdirected_flag": 0,
+   "missed": 0,
+   "n": 1,
+   "rate": 1.0
+  },
+  "SZZ/MUT-03": {
+   "abstained": 0,
+   "ci95": [
+    0.16817758120350967,
+    0.6873304525498135
+   ],
+   "detected": 4,
+   "low_power": true,
+   "misdirected_flag": 5,
+   "missed": 1,
+   "n": 10,
+   "rate": 0.4
+  },
+  "SZZ/MUT-04": {
+   "abstained": 0,
+   "ci95": [
+    0.07147768885802763,
+    0.5907301208974108
+   ],
+   "detected": 2,
+   "low_power": true,
+   "misdirected_flag": 2,
+   "missed": 4,
+   "n": 8,
+   "rate": 0.25
+  },
+  "SZZ/MUT-05": {
+   "abstained": 0,
+   "ci95": [
+    0.0,
+    0.6576280471103807
+   ],
+   "detected": 0,
+   "low_power": true,
+   "misdirected_flag": 0,
+   "missed": 2,
+   "n": 2,
+   "rate": 0.0
+  },
+  "SZZ/OTHER": {
+   "abstained": 0,
+   "ci95": [
+    0.34237195288961925,
+    1.0
+   ],
+   "detected": 2,
+   "low_power": true,
+   "misdirected_flag": 0,
+   "missed": 0,
+   "n": 2,
+   "rate": 1.0
+  }
+ }
 }

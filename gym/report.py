@@ -198,6 +198,13 @@ def render_report(cfg: Config, run_id: str, scores: dict, spend_usd: float,
     return "\n".join(L)
 
 
+def load_inferred(cfg: Config) -> str | None:
+    """Interpretation text lives in a committed file so `gym reproduce`
+    regenerates REPORT.md byte-identically (it is authored input, not output)."""
+    p = cfg.root / cfg.reports_dir / "INFERRED.md"
+    return p.read_text().strip() if p.exists() else None
+
+
 def write_report(cfg: Config, conn, run_id: str, scores: dict,
                  out_dir: Path | None = None) -> Path:
     from . import db as dbmod

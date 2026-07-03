@@ -84,13 +84,13 @@ quote REPORT.md, read this first.
 
 15. **The operator's §15 pre-registration was found blank** and the repo had
     no pre-run commit; predictions cannot be scored against §7 outputs (A4).
-16. **Account credits ran out mid-run** (after MUT/SZZ generation and the
-    non-GEN review batch submission; internal spend cap was NOT hit).
-    Consequences at time of writing: GEN topped out at 265/300 (all classes ≥
-    floor 30; no LOW-POWER flags), and any review shortfall is visible in the
-    per-class `n` columns of REPORT.md. Every command resumes verbatim once
-    credits exist; the cache guarantees already-obtained verdicts are never
-    re-bought.
+16. **Account credits ran out mid-run** (after MUT/SZZ generation; internal
+    spend cap was NOT hit). Synchronous API calls failed while Batch API
+    requests continued to be accepted and processed, so the run completed via
+    batches. Lasting consequence: GEN generation topped out at 265/300 items
+    (all classes ≥ floor 30, GEN-03 full at 50; no LOW-POWER flags on GEN) —
+    the per-class `n` columns in REPORT.md reflect this. All 1,114 review
+    items were ultimately reviewed; nothing else was cut.
 17. **Canary ops were revised once** after the first gate run failed at 87.5%
     (Phase 1, F1 fix-forward): ops restricted and test files excluded, canaries
     regenerated, gate re-run → 100%. Metric definitions were never touched.

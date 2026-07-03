@@ -112,10 +112,14 @@ def cmd_review(args) -> int:
 
 
 def _score(cfg, conn, run_id):
+    from .report import load_inferred
     from .score import collect, compute_scores, emit_events
 
     results = collect(cfg, conn, run_id)
     scores = compute_scores(cfg, results)
+    inferred = load_inferred(cfg)
+    if inferred:
+        scores["_inferred"] = inferred
     events_path = emit_events(cfg, conn, run_id, results)
     return results, scores, events_path
 
