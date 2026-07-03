@@ -72,6 +72,24 @@ CREATE TABLE IF NOT EXISTS llm_cache (
     latency_ms INTEGER, cost_usd REAL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS gen_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class TEXT NOT NULL,
+    repo TEXT NOT NULL,
+    sha TEXT NOT NULL,
+    outcome TEXT NOT NULL,       -- accepted | suite_caught | parse_failure |
+                                 -- anchor_failure | invalid_edit | oversized_payload
+    note TEXT,
+    ts TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS carrier_baselines (
+    repo TEXT NOT NULL,
+    sha TEXT NOT NULL,
+    ok INTEGER,                  -- 1 pass, 0 fail/timeout (suite infeasible at carrier)
+    seconds REAL,
+    note TEXT,
+    PRIMARY KEY (repo, sha)
+);
 CREATE TABLE IF NOT EXISTS spend_ledger (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL DEFAULT (datetime('now')),
