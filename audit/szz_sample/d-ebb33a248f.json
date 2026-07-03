@@ -1,0 +1,29 @@
+{
+ "blamed_lines": {
+  "click/helpers.py": [
+   "encoding = get_best_encoding(file)",
+   "file.write(message)",
+   "if PY2 and isinstance(message, text_type):",
+   "if message:",
+   "if not isinstance(message, string_types):",
+   "message = message.encode(encoding, 'replace')",
+   "message = text_type(message)"
+  ]
+ },
+ "class": "GEN-01",
+ "defect_id": "d-ebb33a248f",
+ "fix_sha": "083d566f2f4809c55dea9ea6d85ae37404da48bc",
+ "fix_subject": "Fixed a bug that caused random prints",
+ "ground_truth_locations": [
+  {
+   "end_line": 171,
+   "file": "click/helpers.py",
+   "start_line": 165
+  }
+ ],
+ "introducer_sha": "c22f16c438b890e346098aeafb3d2e2ce84e35c3",
+ "introducing_diff": "diff --git a/click/_compat.py b/click/_compat.py\nindex d93a7dc..dc7375e 100644\n--- a/click/_compat.py\n+++ b/click/_compat.py\n@@ -18,6 +18,7 @@ if PY2:\n     text_type = unicode\n     bytes = str\n     raw_input = raw_input\n+    string_types = (str, unicode)\n \n     def open_stream(filename, mode='r', encoding=None, errors='strict'):\n         if filename != '-':\n@@ -39,6 +40,7 @@ else:\n     import io\n     text_type = str\n     raw_input = input\n+    string_types = (str,)\n \n     def _make_binary_stream(f, stream_name):\n         buf = getattr(f, 'buffer', None)\ndiff --git a/click/core.py b/click/core.py\nindex 8b7111b..7e6c23d 100644\n--- a/click/core.py\n+++ b/click/core.py\n@@ -599,9 +599,10 @@ class Parameter(object):\n         return value\n \n     def get_missing_message(self, ctx):\n-        return 'Missing %s \"%s\".' % (\n+        return 'Missing %s %s.' % (\n             self.param_type_name,\n-            ' / '.join(chain(self.opts, self.secondary_opts)),\n+            ' / '.join('\"%s\"' % x for x in chain(\n+                self.opts, self.secondary_opts)),\n         )\n \n     def value_from_envvar(self, ctx):\ndiff --git a/click/helpers.py b/click/helpers.py\nindex b390a11..bce0add 100644\n--- a/click/helpers.py\n+++ b/click/helpers.py\n@@ -2,7 +2,7 @@ import os\n import sys\n import struct\n \n-from ._compat import raw_input, PY2, text_type\n+from ._compat import raw_input, PY2, text_type, string_types\n from .utils import get_best_encoding\n from .exceptions import Abort, UsageError\n from .types import convert_type\n@@ -162,6 +162,8 @@ def echo(message=None, file=None):\n     \"\"\"\n     if file is None:\n         file = sys.stdout\n+    if not isinstance(message, string_types):\n+        message = text_type(message)\n     if message:\n         if PY2 and isinstance(message, text_type):\n             encoding = get_best_encoding(file)\ndiff --git a/click/types.py b/click/types.py\nindex ea9ff55..4a0c6ab 100644\n--- a/click/types.py\n+++ b/click/types.py\n@@ -40,7 +40,8 @@ class ParamType(object):\n         if param is None:\n             message = 'Invalid value: %s' % message\n         else:\n-            message = 'Invalid value for %s: %s' % (param.name, message)\n+            names = ' / '.join(param.opts) or param.name\n+            message = 'Invalid value for \"%s\": %s' % (names, message)\n         raise UsageError(message, ctx=ctx)\n \n \n",
+ "label_rationale": "The echo change coerces any non-string message to text_type, so passing message=None becomes the string 'None' (or other falsy values become truthy strings), causing spurious output. The conversion happens before the truthiness check, breaking the intended edge case where None should suppress printing.",
+ "repo": "click",
+ "review_item": "it-cc6faf3e72"
+}

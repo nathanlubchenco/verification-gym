@@ -14,7 +14,8 @@ import sqlite3
 from typing import Any
 
 from .config import Config
-from .llm import SpendCapExceeded, Transport, call_model
+from .llm import (BatchRequest, SpendCapExceeded, Transport, call_model,
+                  call_model_batch)
 from .payload import load_payload, render_prompt
 
 REVIEW_MAX_TOKENS = 1500
@@ -168,3 +169,87 @@ def run_reviews(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
             progress(f"  reviewed {summary['reviewed']} items"
                      f" (${summary['cost_usd']:.2f} this session)")
     return summary
+
+
+def run_reviews_batch(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
+                      batch_transport=None, progress=print) -> dict[str, Any]:
+    """Batched variant of run_reviews (D17): same prompts/protocol at 50%
+    token pricing. Two batch passes: reviews, then re-asks for malformed."""
+    rows = conn.execute("SELECT * FROM review_items ORDER BY item_id").fetchall()
+    done = {r["item_id"] for r in conn.execute(
+        "SELECT item_id FROM verdicts WHERE run_id=?", (run_id,))}
+    rows = [r for r in rows if r["item_id"] not in done]
+    rows = list(rows)
+    random.Random(f"{cfg.seed}:review-order:{run_id}").shuffle(rows)
+    summary = {"reviewed": 0, "abstained": 0, "reasked": 0, "skipped": len(done),
+               "cost_usd": 0.0, "aborted": False}
+    if not rows:
+        return summary
+
+    prompts = {r["item_id"]: render_prompt(load_payload(cfg.root / r["payload_path"]))
+               for r in rows}
+    reqs = [BatchRequest(custom_id=r["item_id"], model=cfg.verifier_model,
+                         system=None, prompt=prompts[r["item_id"]],
+                         max_tokens=REVIEW_MAX_TOKENS, purpose="review")
+            for r in rows]
+    try:
+        first = call_model_batch(cfg, conn, reqs, transport=batch_transport,
+                                 progress=progress)
+    except SpendCapExceeded as exc:
+        progress(f"HARD STOP: {exc}")
+        summary["aborted"] = True
+        return summary
+
+    reask_reqs = []
+    partial: dict[str, tuple] = {}
+    for item_id, r in first.items():
+        verdict = parse_verdict(r.text)
+        if verdict is None:
+            summary["reasked"] += 1
+            reask_reqs.append(BatchRequest(
+                custom_id=item_id, model=cfg.verifier_model, system=None,
+                prompt=prompts[item_id] + REMINDER,
+                max_tokens=REVIEW_MAX_TOKENS, purpose="review-reask"))
+            partial[item_id] = (r.tokens_in, r.tokens_out, r.cost_usd)
+            continue
+        _persist_verdict(conn, item_id, run_id, r.text, verdict, False,
+                         r.tokens_in, r.tokens_out, 0, r.cost_usd, r.prompt_hash)
+        summary["reviewed"] += 1
+        summary["cost_usd"] += r.cost_usd
+
+    if reask_reqs:
+        try:
+            second = call_model_batch(cfg, conn, reask_reqs,
+                                      transport=batch_transport, progress=progress)
+        except SpendCapExceeded as exc:
+            progress(f"HARD STOP during re-asks: {exc}")
+            summary["aborted"] = True
+            return summary
+        for req in reask_reqs:
+            item_id = req.custom_id
+            r2 = second.get(item_id)
+            if r2 is None:
+                continue  # batch item failed; stays pending for a resume
+            t_in, t_out, cost = partial[item_id]
+            verdict = parse_verdict(r2.text)
+            abstained = verdict is None
+            _persist_verdict(conn, item_id, run_id, r2.text, verdict, abstained,
+                             t_in + r2.tokens_in, t_out + r2.tokens_out, 0,
+                             cost + r2.cost_usd, r2.prompt_hash)
+            summary["reviewed"] += 1
+            summary["abstained"] += int(abstained)
+            summary["cost_usd"] += cost + r2.cost_usd
+    return summary
+
+
+def _persist_verdict(conn, item_id, run_id, raw, verdict, abstained,
+                     tokens_in, tokens_out, latency_ms, cost, prompt_hash):
+    conn.execute(
+        "INSERT OR REPLACE INTO verdicts (item_id, run_id, raw_response,"
+        " verdict_json, abstained, tokens_in, tokens_out, latency_ms,"
+        " cost_usd, prompt_hash) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (item_id, run_id, raw,
+         None if verdict is None else json.dumps(verdict, sort_keys=True),
+         int(abstained), tokens_in, tokens_out, latency_ms, cost, prompt_hash),
+    )
+    conn.commit()

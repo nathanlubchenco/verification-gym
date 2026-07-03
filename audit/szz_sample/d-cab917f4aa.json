@@ -1,0 +1,35 @@
+{
+ "blamed_lines": {
+  "requests/sessions.py": [
+   "cookiejar = resp.cookies",
+   "proxies=proxies)",
+   "verify=True, cert=None, proxies=None):"
+  ]
+ },
+ "class": "MUT-05",
+ "defect_id": "d-cab917f4aa",
+ "fix_sha": "5bb2be9a2300ccc3c1901d2f85afb79cfb9e02f1",
+ "fix_subject": "Use session cookies when following redirects",
+ "ground_truth_locations": [
+  {
+   "end_line": 83,
+   "file": "requests/sessions.py",
+   "start_line": 83
+  },
+  {
+   "end_line": 93,
+   "file": "requests/sessions.py",
+   "start_line": 93
+  },
+  {
+   "end_line": 423,
+   "file": "requests/sessions.py",
+   "start_line": 423
+  }
+ ],
+ "introducer_sha": "23d8522285bd7d7b4a1da46325aeac8814d87076",
+ "introducing_diff": "diff --git a/AUTHORS.rst b/AUTHORS.rst\nindex 99639230..6bbddfde 100644\n--- a/AUTHORS.rst\n+++ b/AUTHORS.rst\n@@ -121,4 +121,3 @@ Patches and Suggestions\n - Vinod Chandru\n - Johnny Goodnow <j.goodnow29@gmail.com>\n - Denis Ryzhkov <denisr@denisr.com>\n-- Wilfred Hughes <me@wilfred.me.uk> @dontYetKnow\ndiff --git a/requests/adapters.py b/requests/adapters.py\nindex c38cd080..6f507da8 100644\n--- a/requests/adapters.py\n+++ b/requests/adapters.py\n@@ -45,6 +45,7 @@ class BaseAdapter(object):\n class HTTPAdapter(BaseAdapter):\n     \"\"\"Built-In HTTP Adapter for Urllib3.\"\"\"\n     def __init__(self, pool_connections=DEFAULT_POOLSIZE, pool_maxsize=DEFAULT_POOLSIZE):\n+        self.max_retries = DEFAULT_RETRIES\n         self.config = {}\n \n         super(HTTPAdapter, self).__init__()\n@@ -165,7 +166,7 @@ class HTTPAdapter(BaseAdapter):\n             request.headers['Proxy-Authorization'] = _basic_auth_str(username,\n                                                                      password)\n \n-    def send(self, request, stream=False, timeout=None, max_retries=DEFAULT_RETRIES, verify=True, cert=None, proxies=None):\n+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):\n         \"\"\"Sends PreparedRequest object. Returns Response object.\"\"\"\n \n         conn = self.get_connection(request.url, proxies)\n@@ -187,7 +188,7 @@ class HTTPAdapter(BaseAdapter):\n                     assert_same_host=False,\n                     preload_content=False,\n                     decode_content=False,\n-                    retries=max_retries,\n+                    retries=self.max_retries,\n                     timeout=timeout\n                 )\n \ndiff --git a/requests/api.py b/requests/api.py\nindex d0023807..baf43dd6 100644\n--- a/requests/api.py\n+++ b/requests/api.py\n@@ -27,7 +27,6 @@ def request(method, url, **kwargs):\n     :param files: (optional) Dictionary of 'name': file-like-objects (or {'name': ('filename', fileobj)}) for multipart encoding upload.\n     :param auth: (optional) Auth tuple to enable Basic/Digest/Custom HTTP Auth.\n     :param timeout: (optional) Float describing the timeout of the request.\n-    :param max_retries: (optional) The maximum number of retries (defaults to 0).\n     :param allow_redirects: (optional) Boolean. Set to True if POST/PUT/DELETE redirect following is allowed.\n     :param proxies: (optional) Dictionary mapping protocol to the URL of the proxy.\n     :param verify: (optional) if ``True``, the SSL cert will be verified. A CA_BUNDLE path can also be provided.\ndiff --git a/requests/sessions.py b/requests/sessions.py\nindex 10251087..f2b60ec8 100644\n--- a/requests/sessions.py\n+++ b/requests/sessions.py\n@@ -80,7 +80,7 @@ def merge_kwargs(local_kwarg, default_kwarg):\n \n class SessionRedirectMixin(object):\n     def resolve_redirects(self, resp, req, stream=False, timeout=None,\n-                          max_retries=0, verify=True, cert=None, proxies=None):\n+                          verify=True, cert=None, proxies=None):\n         \"\"\"Receives a Response. Returns a generator of Responses.\"\"\"\n \n         i = 0\n@@ -149,7 +149,6 @@ class SessionRedirectMixin(object):\n                 prepared_request,\n                 stream=stream,\n                 timeout=timeout,\n-                max_retries=max_retries,\n                 verify=verify,\n                 cert=cert,\n                 proxies=proxies,\n@@ -238,7 +237,6 @@ class Session(SessionRedirectMixin):\n         files=None,\n         auth=None,\n         timeout=None,\n-        max_retries=0,\n         allow_redirects=True,\n         proxies=None,\n         hooks=None,\n@@ -306,7 +304,6 @@ class Session(SessionRedirectMixin):\n         send_kwargs = {\n             'stream': stream,\n             'timeout': timeout,\n-            'max_retries': max_retries,\n             'verify': verify,\n             'cert': cert,\n             'proxies': proxies,\n@@ -402,7 +399,6 @@ class Session(SessionRedirectMixin):\n         req = kwargs.pop('req', None)\n         stream = kwargs.get('stream', False)\n         timeout = kwargs.get('timeout')\n-        max_retries = kwargs.get('max_retries')\n         verify = kwargs.get('verify')\n         cert = kwargs.get('cert')\n         proxies = kwargs.get('proxies')\n@@ -423,8 +419,7 @@ class Session(SessionRedirectMixin):\n \n         # Redirect resolving generator.\n         gen = self.resolve_redirects(r, request, stream=stream,\n-                                     timeout=timeout, max_retries=max_retries,\n-                                     verify=verify, cert=cert,\n+                                     timeout=timeout, verify=verify, cert=cert,\n                                      proxies=proxies)\n \n         # Resolve redirects if allowed.\n",
+ "label_rationale": "",
+ "repo": "requests",
+ "review_item": "it-8658469306"
+}

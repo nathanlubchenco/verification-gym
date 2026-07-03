@@ -1,0 +1,29 @@
+{
+ "blamed_lines": {
+  "jinja2/compiler.py": [
+   "if not nodes:",
+   "self.writeline('pass')"
+  ]
+ },
+ "class": "GEN-01",
+ "defect_id": "d-ee0885c59d",
+ "fix_sha": "e73c574c2130ac71857b3beb5ebf03bf03de01d7",
+ "fix_subject": "Resolved bad code generation on toplevel ifs",
+ "ground_truth_locations": [
+  {
+   "end_line": 350,
+   "file": "jinja2/compiler.py",
+   "start_line": 349
+  },
+  {
+   "end_line": 772,
+   "file": "jinja2/compiler.py",
+   "start_line": 772
+  }
+ ],
+ "introducer_sha": "a4dde4b0650e28bbdd7b212f4e03a991dbaff919",
+ "introducing_diff": "diff --git a/jinja2/compiler.py b/jinja2/compiler.py\nindex 51116efe..f6c4638b 100644\n--- a/jinja2/compiler.py\n+++ b/jinja2/compiler.py\n@@ -345,11 +345,9 @@ class CodeGenerator(NodeVisitor):\n         \"\"\"Visit a list of nodes as block in a frame.  If the current frame\n         is no buffer a dummy ``if 0: yield None`` is written automatically.\n         \"\"\"\n-        if frame.buffer is None:\n-            self.writeline('if 0: yield None')\n-        else:\n-            self.writeline('pass')\n         try:\n+            if not nodes:\n+                self.writeline('pass')\n             for node in nodes:\n                 self.visit(node, frame)\n         except CompilerExit:\n@@ -555,6 +553,7 @@ class CodeGenerator(NodeVisitor):\n     def write_commons(self):\n         self.writeline('resolve = context.resolve_or_missing')\n         self.writeline('undefined = environment.undefined')\n+        self.writeline('if 0: yield None')\n \n     # -- Statement Visitors\n \n",
+ "label_rationale": "The optimization removed the per-frame 'if 0: yield None' generator-forcing statement and replaced it with a single top-level one, but this breaks cases (like toplevel ifs) where a code block needs to be a generator even though the shared statement isn't in scope. It's a subtle semantic error in the code-generation logic that misses an edge case.",
+ "repo": "jinja2",
+ "review_item": "it-7d6a749ddb"
+}

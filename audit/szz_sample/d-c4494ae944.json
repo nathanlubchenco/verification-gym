@@ -1,0 +1,23 @@
+{
+ "blamed_lines": {
+  "requests/models.py": [
+   "\"Perhaps you meant http://{0}?\".format(to_native_string(url,encoding='utf8')))"
+  ]
+ },
+ "class": "GEN-05",
+ "defect_id": "d-c4494ae944",
+ "fix_sha": "599f8343512277671d08e043a0505a82630c641d",
+ "fix_subject": "fix bug 2540",
+ "ground_truth_locations": [
+  {
+   "end_line": 361,
+   "file": "requests/models.py",
+   "start_line": 361
+  }
+ ],
+ "introducer_sha": "f02d0f9e79a3aa3f0b716871f457ceb8f446bdba",
+ "introducing_diff": "diff --git a/requests/models.py b/requests/models.py\nindex 869a9424..545c5257 100644\n--- a/requests/models.py\n+++ b/requests/models.py\n@@ -358,7 +358,7 @@ class PreparedRequest(RequestEncodingMixin, RequestHooksMixin):\n \n         if not scheme:\n             raise MissingSchema(\"Invalid URL {0!r}: No schema supplied. \"\n-                                \"Perhaps you meant http://{0}?\".format(url.encode('utf8')))\n+                                \"Perhaps you meant http://{0}?\".format(to_native_string(url,encoding='utf8')))\n \n         if not host:\n             raise InvalidURL(\"Invalid URL %r: No host supplied\" % url)\n",
+ "label_rationale": "The change alters how a URL string is handled in an error message, converting it via to_native_string with encoding rather than raw bytes. This input/path-handling of the URL encoding introduces the defect, which is corrected in the fix for the same bug.",
+ "repo": "requests",
+ "review_item": "it-46e8015245"
+}

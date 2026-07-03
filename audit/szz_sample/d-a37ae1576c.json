@@ -1,0 +1,169 @@
+{
+ "blamed_lines": {
+  "src/attr/_funcs.py": [
+   ")",
+   "[",
+   "]",
+   "_asdict_anything(",
+   "astuple(",
+   "cf(",
+   "dict_factory=dict_factory,",
+   "else j",
+   "filter=filter,",
+   "for i in v",
+   "for j in v",
+   "i,",
+   "if has(j.__class__)",
+   "is_key=False,",
+   "j,",
+   "recurse=True,",
+   "retain_collection_types=retain,",
+   "retain_collection_types=retain_collection_types,",
+   "rv.append(",
+   "rv[a.name] = cf(",
+   "tuple_factory=tuple_factory,",
+   "value_serializer=value_serializer,"
+  ]
+ },
+ "class": "GEN-01",
+ "defect_id": "d-a37ae1576c",
+ "fix_sha": "0bf0678a224dc89f150eb55861700864bec85cf6",
+ "fix_subject": "Fix TypeError for `asdict(<class with namedtuple>, retain_collection_types=True)` (#1165)",
+ "ground_truth_locations": [
+  {
+   "end_line": 12,
+   "file": "src/attr/_funcs.py",
+   "start_line": 12
+  },
+  {
+   "end_line": 54,
+   "file": "src/attr/_funcs.py",
+   "start_line": 54
+  },
+  {
+   "end_line": 59,
+   "file": "src/attr/_funcs.py",
+   "start_line": 57
+  },
+  {
+   "end_line": 64,
+   "file": "src/attr/_funcs.py",
+   "start_line": 61
+  },
+  {
+   "end_line": 69,
+   "file": "src/attr/_funcs.py",
+   "start_line": 69
+  },
+  {
+   "end_line": 72,
+   "file": "src/attr/_funcs.py",
+   "start_line": 72
+  },
+  {
+   "end_line": 75,
+   "file": "src/attr/_funcs.py",
+   "start_line": 75
+  },
+  {
+   "end_line": 77,
+   "file": "src/attr/_funcs.py",
+   "start_line": 77
+  },
+  {
+   "end_line": 96,
+   "file": "src/attr/_funcs.py",
+   "start_line": 95
+  },
+  {
+   "end_line": 98,
+   "file": "src/attr/_funcs.py",
+   "start_line": 98
+  },
+  {
+   "end_line": 101,
+   "file": "src/attr/_funcs.py",
+   "start_line": 100
+  },
+  {
+   "end_line": 108,
+   "file": "src/attr/_funcs.py",
+   "start_line": 108
+  },
+  {
+   "end_line": 110,
+   "file": "src/attr/_funcs.py",
+   "start_line": 110
+  },
+  {
+   "end_line": 118,
+   "file": "src/attr/_funcs.py",
+   "start_line": 118
+  },
+  {
+   "end_line": 159,
+   "file": "src/attr/_funcs.py",
+   "start_line": 158
+  },
+  {
+   "end_line": 166,
+   "file": "src/attr/_funcs.py",
+   "start_line": 161
+  },
+  {
+   "end_line": 184,
+   "file": "src/attr/_funcs.py",
+   "start_line": 169
+  },
+  {
+   "end_line": 187,
+   "file": "src/attr/_funcs.py",
+   "start_line": 187
+  },
+  {
+   "end_line": 190,
+   "file": "src/attr/_funcs.py",
+   "start_line": 190
+  },
+  {
+   "end_line": 194,
+   "file": "src/attr/_funcs.py",
+   "start_line": 192
+  },
+  {
+   "end_line": 197,
+   "file": "src/attr/_funcs.py",
+   "start_line": 197
+  },
+  {
+   "end_line": 201,
+   "file": "src/attr/_funcs.py",
+   "start_line": 199
+  },
+  {
+   "end_line": 204,
+   "file": "src/attr/_funcs.py",
+   "start_line": 204
+  },
+  {
+   "end_line": 207,
+   "file": "src/attr/_funcs.py",
+   "start_line": 206
+  },
+  {
+   "end_line": 250,
+   "file": "src/attr/_funcs.py",
+   "start_line": 250
+  },
+  {
+   "end_line": 260,
+   "file": "src/attr/_funcs.py",
+   "start_line": 259
+  }
+ ],
+ "introducer_sha": "908cb018f21beb4c139160c3d8a85db330e87cee",
+ "introducing_diff": "diff --git a/changelog.d/395.change.rst b/changelog.d/395.change.rst\nnew file mode 100644\nindex 0000000..dc91818\n--- /dev/null\n+++ b/changelog.d/395.change.rst\n@@ -0,0 +1 @@\n+``attr.asdict()`` now properly handles deeply nested lists and dictionaries.\ndiff --git a/src/attr/_funcs.py b/src/attr/_funcs.py\nindex 730d53f..b61d239 100644\n--- a/src/attr/_funcs.py\n+++ b/src/attr/_funcs.py\n@@ -50,20 +50,15 @@ def asdict(\n         if recurse is True:\n             if has(v.__class__):\n                 rv[a.name] = asdict(\n-                    v, recurse=True, filter=filter, dict_factory=dict_factory\n+                    v, True, filter, dict_factory, retain_collection_types\n                 )\n             elif isinstance(v, (tuple, list, set)):\n                 cf = v.__class__ if retain_collection_types is True else list\n                 rv[a.name] = cf(\n                     [\n-                        asdict(\n-                            i,\n-                            recurse=True,\n-                            filter=filter,\n-                            dict_factory=dict_factory,\n+                        _asdict_anything(\n+                            i, filter, dict_factory, retain_collection_types\n                         )\n-                        if has(i.__class__)\n-                        else i\n                         for i in v\n                     ]\n                 )\n@@ -71,12 +66,12 @@ def asdict(\n                 df = dict_factory\n                 rv[a.name] = df(\n                     (\n-                        asdict(kk, dict_factory=df)\n-                        if has(kk.__class__)\n-                        else kk,\n-                        asdict(vv, dict_factory=df)\n-                        if has(vv.__class__)\n-                        else vv,\n+                        _asdict_anything(\n+                            kk, filter, df, retain_collection_types\n+                        ),\n+                        _asdict_anything(\n+                            vv, filter, df, retain_collection_types\n+                        ),\n                     )\n                     for kk, vv in iteritems(v)\n                 )\n@@ -87,6 +82,37 @@ def asdict(\n     return rv\n \n \n+def _asdict_anything(val, filter, dict_factory, retain_collection_types):\n+    \"\"\"\n+    ``asdict`` only works on attrs instances, this works on anything.\n+    \"\"\"\n+    if getattr(val.__class__, \"__attrs_attrs__\", None) is not None:\n+        # Attrs class.\n+        rv = asdict(val, True, filter, dict_factory, retain_collection_types)\n+    elif isinstance(val, (tuple, list, set)):\n+        cf = val.__class__ if retain_collection_types is True else list\n+        rv = cf(\n+            [\n+                _asdict_anything(\n+                    i, filter, dict_factory, retain_collection_types\n+                )\n+                for i in val\n+            ]\n+        )\n+    elif isinstance(val, dict):\n+        df = dict_factory\n+        rv = df(\n+            (\n+                _asdict_anything(kk, filter, df, retain_collection_types),\n+                _asdict_anything(vv, filter, df, retain_collection_types),\n+            )\n+            for kk, vv in iteritems(val)\n+        )\n+    else:\n+        rv = val\n+    return rv\n+\n+\n def astuple(\n     inst,\n     recurse=True,\ndiff --git a/tests/test_funcs.py b/tests/test_funcs.py\nindex 23236b2..1d85243 100644\n--- a/tests/test_funcs.py\n+++ b/tests/test_funcs.py\n@@ -48,6 +48,24 @@ class TestAsDict(object):\n             C(C(1, 2), C(3, 4)), dict_factory=dict_class\n         )\n \n+    def test_nested_lists(self, C):\n+        \"\"\"\n+        Test unstructuring deeply nested lists.\n+        \"\"\"\n+        inner = C(1, 2)\n+        outer = C([[inner]], None)\n+\n+        assert {\"x\": [[{\"x\": 1, \"y\": 2}]], \"y\": None} == asdict(outer)\n+\n+    def test_nested_dicts(self, C):\n+        \"\"\"\n+        Test unstructuring deeply nested dictionaries.\n+        \"\"\"\n+        inner = C(1, 2)\n+        outer = C({1: {2: inner}}, None)\n+\n+        assert {\"x\": {1: {2: {\"x\": 1, \"y\": 2}}}, \"y\": None} == asdict(outer)\n+\n     @given(nested_classes, st.sampled_from(MAPPING_TYPES))\n     @settings(suppress_health_check=[HealthCheck.too_slow])\n     def test_recurse_property(self, cls, dict_class):\n",
+ "label_rationale": "The introduced code reconstructs collections with `cf = val.__class__` and then calls `cf([...])` with a single list argument. For namedtuples, this fails because namedtuple constructors expect positional/multiple args, not a single iterable, raising a TypeError. This is a subtle edge-case in domain logic where the collection-type reconstruction doesn't account for namedtuples.",
+ "repo": "attrs",
+ "review_item": "it-42de4ccc68"
+}

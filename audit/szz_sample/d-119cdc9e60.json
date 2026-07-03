@@ -1,0 +1,104 @@
+{
+ "blamed_lines": {
+  "jinja2/utils.py": [
+   "except KeyError:",
+   "except ValueError:",
+   "if self._queue[-1] != key:",
+   "pass",
+   "return default",
+   "return rv",
+   "return self[key]",
+   "rv = self._mapping[key]",
+   "self._append(key)",
+   "self._remove(key)",
+   "self[key] = default",
+   "try:"
+  ]
+ },
+ "class": "GEN-04",
+ "defect_id": "d-119cdc9e60",
+ "fix_sha": "d4e54382cbe6c9760d01fec22655851bd54f02bc",
+ "fix_subject": "Pessimistic locking for LRU cache.  This fixes #8",
+ "ground_truth_locations": [
+  {
+   "end_line": 13,
+   "file": "jinja2/utils.py",
+   "start_line": 13
+  },
+  {
+   "end_line": 77,
+   "file": "jinja2/utils.py",
+   "start_line": 77
+  },
+  {
+   "end_line": 96,
+   "file": "jinja2/utils.py",
+   "start_line": 96
+  },
+  {
+   "end_line": 330,
+   "file": "jinja2/utils.py",
+   "start_line": 330
+  },
+  {
+   "end_line": 337,
+   "file": "jinja2/utils.py",
+   "start_line": 334
+  },
+  {
+   "end_line": 347,
+   "file": "jinja2/utils.py",
+   "start_line": 343
+  },
+  {
+   "end_line": 352,
+   "file": "jinja2/utils.py",
+   "start_line": 352
+  },
+  {
+   "end_line": 382,
+   "file": "jinja2/utils.py",
+   "start_line": 378
+  },
+  {
+   "end_line": 389,
+   "file": "jinja2/utils.py",
+   "start_line": 389
+  },
+  {
+   "end_line": 391,
+   "file": "jinja2/utils.py",
+   "start_line": 391
+  },
+  {
+   "end_line": 394,
+   "file": "jinja2/utils.py",
+   "start_line": 394
+  },
+  {
+   "end_line": 404,
+   "file": "jinja2/utils.py",
+   "start_line": 404
+  },
+  {
+   "end_line": 406,
+   "file": "jinja2/utils.py",
+   "start_line": 406
+  },
+  {
+   "end_line": 427,
+   "file": "jinja2/utils.py",
+   "start_line": 427
+  },
+  {
+   "end_line": 454,
+   "file": "jinja2/utils.py",
+   "start_line": 454
+  }
+ ],
+ "introducer_sha": "000b49193cad77be48020a6ad2195584e4a4ae0e",
+ "introducing_diff": "diff --git a/jinja2/utils.py b/jinja2/utils.py\nindex 89617e08..7bddcfe9 100644\n--- a/jinja2/utils.py\n+++ b/jinja2/utils.py\n@@ -10,6 +10,10 @@\n \"\"\"\n import re\n import string\n+try:\n+    from thread import allocate_lock\n+except ImportError:\n+    from dummy_thread import allocate_lock\n from collections import deque\n from copy import deepcopy\n from itertools import imap\n@@ -308,6 +312,7 @@ class LRUCache(object):\n         self._pop = self._queue.pop\n         if hasattr(self._queue, 'remove'):\n             self._remove = self._queue.remove\n+        self._wlock = allocate_lock()\n         self._append = self._queue.append\n \n     def _remove(self, obj):\n@@ -326,23 +331,29 @@ class LRUCache(object):\n \n     def get(self, key, default=None):\n         \"\"\"Return an item from the cache dict or `default`\"\"\"\n-        if key in self:\n+        try:\n             return self[key]\n-        return default\n+        except KeyError:\n+            return default\n \n     def setdefault(self, key, default=None):\n         \"\"\"Set `default` if the key is not in the cache otherwise\n         leave unchanged. Return the value of this key.\n         \"\"\"\n-        if key in self:\n+        try:\n             return self[key]\n-        self[key] = default\n-        return default\n+        except KeyError:\n+            self[key] = default\n+            return default\n \n     def clear(self):\n         \"\"\"Clear the cache.\"\"\"\n-        self._mapping.clear()\n-        self._queue.clear()\n+        self._wlock.acquire()\n+        try:\n+            self._mapping.clear()\n+            self._queue.clear()\n+        finally:\n+            self._wlock.release()\n \n     def __contains__(self, key):\n         \"\"\"Check if a key exists in this cache.\"\"\"\n@@ -374,19 +385,27 @@ class LRUCache(object):\n         \"\"\"Sets the value for an item. Moves the item up so that it\n         has the highest priority then.\n         \"\"\"\n-        if key in self._mapping:\n-            self._remove(key)\n-        elif len(self._mapping) == self.capacity:\n-            del self._mapping[self._popleft()]\n-        self._append(key)\n-        self._mapping[key] = value\n+        self._wlock.acquire()\n+        try:\n+            if key in self._mapping:\n+                self._remove(key)\n+            elif len(self._mapping) == self.capacity:\n+                del self._mapping[self._popleft()]\n+            self._append(key)\n+            self._mapping[key] = value\n+        finally:\n+            self._wlock.release()\n \n     def __delitem__(self, key):\n         \"\"\"Remove an item from the cache dict.\n         Raise an `KeyError` if it does not exist.\n         \"\"\"\n-        del self._mapping[key]\n-        self._remove(key)\n+        self._wlock.acquire()\n+        try:\n+            del self._mapping[key]\n+            self._remove(key)\n+        finally:\n+            self._wlock.release()\n \n     def __iter__(self):\n         \"\"\"Iterate over all values in the cache dict, ordered by\n",
+ "label_rationale": "The thread-safety change added a lock only around some operations but left the __getitem__/read path (which mutates the queue order to promote items) unprotected, leaving a race condition. The fix switched to pessimistic locking covering all mutating operations, confirming the concurrency defect.",
+ "repo": "jinja2",
+ "review_item": "it-3d69fff6d7"
+}

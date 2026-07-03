@@ -1,0 +1,24 @@
+{
+ "blamed_lines": {
+  "requests/adapters.py": [
+   "conn = self.poolmanager.ProxyManager(self.poolmanager.proxy_from_url(proxy))",
+   "from .packages.urllib3.poolmanager import PoolManager"
+  ]
+ },
+ "class": "MUT-03",
+ "defect_id": "d-b5da70e934",
+ "fix_sha": "5152c98223d46c76cb7e88cb833b0087daf83d54",
+ "fix_subject": "fix for #1017",
+ "ground_truth_locations": [
+  {
+   "end_line": 11,
+   "file": "requests/adapters.py",
+   "start_line": 11
+  }
+ ],
+ "introducer_sha": "88d41430186b98166e20f7b6d8f100c72fcd07b3",
+ "introducing_diff": "diff --git a/requests/adapters.py b/requests/adapters.py\nnew file mode 100644\nindex 00000000..d4165721\n--- /dev/null\n+++ b/requests/adapters.py\n@@ -0,0 +1,99 @@\n+# -*- coding: utf-8 -*-\n+\n+\"\"\"\n+requests.adapters\n+~~~~~~~~~~~~~~~~~\n+\n+This module contains the transport adapters that Requests uses to define\n+and maintain connections.\n+\"\"\"\n+import os\n+from .packages.urllib3.poolmanager import PoolManager\n+from .utils import DEFAULT_CA_BUNDLE_PATH\n+\n+\n+DEFAULT_POOLSIZE = 10\n+DEFAULT_RETRIES = 0\n+\n+\n+class BaseAdapter(object):\n+    \"\"\"The Base Transport Adapter\"\"\"\n+\n+    def __init__(self):\n+        super(BaseAdapter, self).__init__()\n+\n+    def send(self):\n+        raise NotImplementedError\n+\n+    def close(self):\n+        raise NotImplementedError\n+\n+\n+class HTTPAdapter(BaseAdapter):\n+    \"\"\"Built-In HTTP Adapter for Urllib3.\"\"\"\n+    def __init__(self,\n+        pool_connections=DEFAULT_POOLSIZE,\n+        pool_maxsize=DEFAULT_POOLSIZE):\n+        self.max_retries = DEFAULT_RETRIES\n+        self.config = {}\n+\n+        super(HTTPAdapter, self).__init__()\n+\n+        self.init_poolmanager(pool_connections, pool_maxsize)\n+\n+    def init_poolmanager(self, connections, maxsize):\n+        self.poolmanager = PoolManager(num_pools=connections, maxsize=maxsize)\n+\n+    def cert_verify(self, conn, verify, cert):\n+        if url.startswith('https') and self.verify:\n+\n+            cert_loc = None\n+\n+            # Allow self-specified cert location.\n+            if self.verify is not True:\n+                cert_loc = self.verify\n+\n+            # Look for configuration.\n+            if not cert_loc and self.config.get('trust_env'):\n+                cert_loc = os.environ.get('REQUESTS_CA_BUNDLE')\n+\n+            # Curl compatibility.\n+            if not cert_loc and self.config.get('trust_env'):\n+                cert_loc = os.environ.get('CURL_CA_BUNDLE')\n+\n+            if not cert_loc:\n+                cert_loc = DEFAULT_CA_BUNDLE_PATH\n+\n+            if not cert_loc:\n+                raise Exception(\"Could not find a suitable SSL CA certificate bundle.\")\n+\n+            conn.cert_reqs = 'CERT_REQUIRED'\n+            conn.ca_certs = cert_loc\n+        else:\n+            conn.cert_reqs = 'CERT_NONE'\n+            conn.ca_certs = None\n+\n+        if self.cert:\n+            if len(self.cert) == 2:\n+                conn.cert_file = self.cert[0]\n+                conn.key_file = self.cert[1]\n+            else:\n+                conn.cert_file = self.cert\n+\n+    def close(self):\n+        \"\"\"Dispose of any internal state.\n+\n+        Currently, this just closes the PoolManager, which closes pooled\n+        connections.\n+        \"\"\"\n+        self.poolmanager.clear()\n+\n+    def send(self, request, timeout, verify, cert):\n+        \"\"\"Sends PreparedRequest object. Returns Response object.\"\"\"\n+\n+        conn = self._poolmanager.connection_from_url(request.url)\n+        self.cert_verify(conn, verify, cert)\n+\n+\n+\n+\n",
+ "label_rationale": "The cert_verify method takes parameters verify and cert but uses self.verify, self.cert, and url (undefined) instead of the passed arguments conn/verify/cert and request.url. The method references the wrong variables, causing NameError and ignoring the actual arguments.",
+ "repo": "requests",
+ "review_item": "it-f892718278"
+}

@@ -1,0 +1,148 @@
+{
+ "blamed_lines": {
+  "click/_bashcomplete.py": [
+   "args_remaining = ctx.protected_args + ctx.args",
+   "args_remaining[0], args_remaining[1:], parent=ctx, resilient_parsing=True)",
+   "break",
+   "cmd = ctx.command.get_command(ctx, args_remaining[0])",
+   "completions.extend(get_user_autocompletions(",
+   "ctx = cli.make_context(prog_name, args, resilient_parsing=True)",
+   "ctx = cmd.make_context(",
+   "ctx = ctx.parent",
+   "ctx, all_args, incomplete, param))",
+   "if cmd is None:",
+   "if param.required:",
+   "return False",
+   "return None",
+   "return completions",
+   "while ctx is not None and args_remaining:"
+  ],
+  "tests/test_bashcomplete.py": [
+   "'') == ['bbsubarg1', 'bbsubarg2']",
+   "@click.argument('arg', type=click.Choice(['arg1', 'arg2']), required=True)",
+   "@click.argument('arg', type=click.Choice(['carg1', 'carg2']), required=False)",
+   "@click.argument('arg1', required=False, type=click.Choice(['arg11', 'arg12']))",
+   "@click.argument('arg2', required=False, type=click.Choice(['arg21', 'arg22']))",
+   "@click.argument('arg3', required=False, type=click.Choice(['arg', 'argument']))",
+   "@click.option('--opt2', type=click.Choice(['opt21', 'opt22']))",
+   "['bsubopt1', 'bsubopt2']",
+   "['sub', '--sub-opt', 'subopt1', 'subarg1', 'bsub', '--bsub-opt', 'bsubopt1', 'bsubarg1'],",
+   "['sub', '--sub-opt', 'subopt1', 'subarg1', 'bsub', '--bsub-opt'], '') == \\",
+   "['sub', '--sub-opt', 'subopt1', 'subarg1', 'bsub'], '-') == ['--bsub-opt']",
+   "['subarg1', 'subarg2', 'bsub']",
+   "assert choices_with_help(cli, ['asub'], 'b') == [('bsub', 'bsub help')]",
+   "assert choices_with_help(cli, ['sub'], '') == [('subarg1', None), ('subarg2', None), ('bsub', 'bsub help')]",
+   "assert choices_without_help(cli, ['asub', '--asub-opt', '5', 'bsub'], '-') == ['--bsub-opt']",
+   "assert choices_without_help(cli, ['asub', '--asub-opt'], '') == []",
+   "assert choices_without_help(cli, ['asub', 'bsub'], '-') == ['--bsub-opt']",
+   "assert choices_without_help(cli, ['asub', 'csub'], '-') == ['--csub-opt']",
+   "assert choices_without_help(cli, ['asub'], '') == ['bsub', 'csub']",
+   "assert choices_without_help(cli, ['asub'], '-') == ['--asub-opt']",
+   "assert choices_without_help(cli, ['bsub'], '') == ['arg1', 'arg2']",
+   "assert choices_without_help(cli, [], '') == ['asub', 'bsub', 'csub']",
+   "def cli(cli_opt):",
+   "def sub(sub_opt):"
+  ]
+ },
+ "class": "GEN-01",
+ "defect_id": "d-bee8020b6b",
+ "fix_sha": "b61ec644fad6ed03b3e73f77c7c1242ebf0a3933",
+ "fix_subject": "Fix bash completion when defaults are present and the way subcommands are handled. This makes the completion logic behave the same way the paser does. Fixes #925 Fixes #919",
+ "ground_truth_locations": [
+  {
+   "end_line": 46,
+   "file": "click/_bashcomplete.py",
+   "start_line": 44
+  },
+  {
+   "end_line": 50,
+   "file": "click/_bashcomplete.py",
+   "start_line": 48
+  },
+  {
+   "end_line": 52,
+   "file": "click/_bashcomplete.py",
+   "start_line": 52
+  },
+  {
+   "end_line": 54,
+   "file": "click/_bashcomplete.py",
+   "start_line": 54
+  },
+  {
+   "end_line": 75,
+   "file": "click/_bashcomplete.py",
+   "start_line": 75
+  },
+  {
+   "end_line": 79,
+   "file": "click/_bashcomplete.py",
+   "start_line": 79
+  },
+  {
+   "end_line": 101,
+   "file": "click/_bashcomplete.py",
+   "start_line": 101
+  },
+  {
+   "end_line": 158,
+   "file": "click/_bashcomplete.py",
+   "start_line": 158
+  },
+  {
+   "end_line": 165,
+   "file": "click/_bashcomplete.py",
+   "start_line": 165
+  },
+  {
+   "end_line": 202,
+   "file": "click/_bashcomplete.py",
+   "start_line": 202
+  },
+  {
+   "end_line": 73,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 73
+  },
+  {
+   "end_line": 118,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 118
+  },
+  {
+   "end_line": 145,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 143
+  },
+  {
+   "end_line": 159,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 159
+  },
+  {
+   "end_line": 185,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 184
+  },
+  {
+   "end_line": 248,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 248
+  },
+  {
+   "end_line": 266,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 266
+  },
+  {
+   "end_line": 268,
+   "file": "tests/test_bashcomplete.py",
+   "start_line": 268
+  }
+ ],
+ "introducer_sha": "92c8053bb9e7221efc87355c364fee256e1efc76",
+ "introducing_diff": "diff --git a/click/_bashcomplete.py b/click/_bashcomplete.py\nindex 10a9dc2..a49fe7d 100644\n--- a/click/_bashcomplete.py\n+++ b/click/_bashcomplete.py\n@@ -42,14 +42,18 @@ def resolve_ctx(cli, prog_name, args):\n     :return: the final context/command parsed\n     \"\"\"\n     ctx = cli.make_context(prog_name, args, resilient_parsing=True)\n-    while ctx.protected_args + ctx.args and isinstance(ctx.command, MultiCommand):\n-        a = ctx.protected_args + ctx.args\n-        cmd = ctx.command.get_command(ctx, a[0])\n+    args_remaining = ctx.protected_args + ctx.args\n+    while ctx is not None and args_remaining:\n+      if isinstance(ctx.command, MultiCommand):\n+        cmd = ctx.command.get_command(ctx, args_remaining[0])\n         if cmd is None:\n             return None\n-        ctx = cmd.make_context(a[0], a[1:], parent=ctx, resilient_parsing=True)\n-    return ctx\n+        ctx = cmd.make_context(args_remaining[0], args_remaining[1:], parent=ctx, resilient_parsing=True)\n+        args_remaining = ctx.protected_args + ctx.args\n+      else:\n+        ctx = ctx.parent\n \n+    return ctx\n \n def start_of_option(param_str):\n     \"\"\"\n@@ -164,6 +168,11 @@ def get_choices(cli, prog_name, args, incomplete):\n         # completion for any subcommands\n         choices.extend(ctx.command.list_commands(ctx))\n \n+    if not start_of_option(incomplete) and ctx.parent is not None and isinstance(ctx.parent.command, MultiCommand) and ctx.parent.command.chain:\n+        # completion for chained commands\n+        remaining_comands = set(ctx.parent.command.list_commands(ctx.parent))-set(ctx.parent.protected_args)\n+        choices.extend(remaining_comands)\n+\n     for item in choices:\n         if item.startswith(incomplete):\n             yield item\ndiff --git a/tests/test_bashcomplete.py b/tests/test_bashcomplete.py\nindex f8e91b4..268e046 100644\n--- a/tests/test_bashcomplete.py\n+++ b/tests/test_bashcomplete.py\n@@ -112,6 +112,32 @@ def test_long_chain():\n     assert list(get_choices(cli, 'lol', ['asub', 'bsub', 'csub'], 'b')) == ['blue']\n \n \n+def test_chaining():\n+    @click.group('cli', chain=True)\n+    @click.option('--cli-opt')\n+    def cli(cli_opt):\n+        pass\n+\n+    @cli.command('asub')\n+    @click.option('--asub-opt')\n+    def asub(asub_opt):\n+        pass\n+\n+    @cli.command('bsub')\n+    @click.option('--bsub-opt')\n+    @click.argument('arg', type=click.Choice(['arg1', 'arg2']))\n+    def bsub(bsub_opt, arg):\n+        pass\n+\n+    assert list(get_choices(cli, 'lol', [], '-')) == ['--cli-opt']\n+    assert list(get_choices(cli, 'lol', [], '')) == ['asub', 'bsub']\n+    assert list(get_choices(cli, 'lol', ['asub'], '-')) == ['--asub-opt']\n+    assert list(get_choices(cli, 'lol', ['asub'], '')) == ['bsub']\n+    assert list(get_choices(cli, 'lol', ['bsub'], '')) == ['arg1', 'arg2', 'asub']\n+    assert list(get_choices(cli, 'lol', ['asub', '--asub-opt', '5', 'bsub'], '-')) == ['--bsub-opt']\n+    assert list(get_choices(cli, 'lol', ['asub', 'bsub'], '-')) == ['--bsub-opt']\n+\n+\n def test_argument_choice():\n     @click.command()\n     @click.argument('arg1', required=False, type=click.Choice(['arg11', 'arg12']))\n",
+ "label_rationale": "The rewritten resolve_ctx and chained-command completion logic mishandles edge cases, notably when defaults are present, causing incorrect completion suggestions. This is a subtle semantic error in the domain logic of parsing/completing chained commands that diverges from how the parser actually resolves arguments.",
+ "repo": "click",
+ "review_item": "it-fcc2cb710f"
+}

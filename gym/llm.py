@@ -22,6 +22,9 @@ class SpendCapExceeded(RuntimeError):
     pass
 
 
+BATCH_DISCOUNT = 0.5  # Message Batches API: 50% of standard token prices (D17)
+
+
 @dataclass
 class LLMResult:
     text: str
@@ -83,6 +86,123 @@ def estimate_cost(cfg: Config, model: str, prompt: str, system: str | None,
 
 
 _default_transport: Transport | None = None
+
+
+@dataclass
+class BatchRequest:
+    custom_id: str
+    model: str
+    system: str | None
+    prompt: str
+    max_tokens: int
+    purpose: str
+
+
+class BatchTransport(Protocol):
+    def run_batch(self, requests: list[BatchRequest], progress) -> list[tuple]:
+        """Yields (custom_id, ok, text, tokens_in, tokens_out)."""
+        ...
+
+
+class AnthropicBatchTransport:
+    POLL_S = 30
+
+    def __init__(self) -> None:
+        import anthropic
+
+        self._client = anthropic.Anthropic()
+
+    def run_batch(self, requests, progress):
+        out = []
+        CHUNK = 1000
+        for i in range(0, len(requests), CHUNK):
+            chunk = requests[i:i + CHUNK]
+            payload = []
+            for r in chunk:
+                params = {"model": r.model, "max_tokens": r.max_tokens,
+                          "messages": [{"role": "user", "content": r.prompt}]}
+                if r.system:
+                    params["system"] = r.system
+                payload.append({"custom_id": r.custom_id, "params": params})
+            batch = self._client.messages.batches.create(requests=payload)
+            progress(f"  batch {batch.id}: {len(chunk)} requests submitted")
+            while True:
+                b = self._client.messages.batches.retrieve(batch.id)
+                if b.processing_status == "ended":
+                    break
+                progress(f"  batch {batch.id}: {b.request_counts.processing} processing")
+                time.sleep(self.POLL_S)
+            for result in self._client.messages.batches.results(batch.id):
+                if result.result.type == "succeeded":
+                    msg = result.result.message
+                    text = "".join(bk.text for bk in msg.content if bk.type == "text")
+                    out.append((result.custom_id, True, text,
+                                msg.usage.input_tokens, msg.usage.output_tokens))
+                else:
+                    out.append((result.custom_id, False, result.result.type, 0, 0))
+        return out
+
+
+def call_model_batch(cfg: Config, conn: sqlite3.Connection,
+                     requests: list[BatchRequest], *,
+                     transport: BatchTransport | None = None,
+                     progress=print) -> dict[str, LLMResult]:
+    """Batched calls at BATCH_DISCOUNT pricing. Cache/ledger semantics match
+    call_model; latency_ms is 0 (not meaningful under batching, D17). Failed
+    requests are simply absent from the result (caller resumes later)."""
+    results: dict[str, LLMResult] = {}
+    pending: list[BatchRequest] = []
+    hashes: dict[str, str] = {}
+    for r in requests:
+        ph = prompt_hash(r.model, r.system, r.prompt, r.max_tokens)
+        hashes[r.custom_id] = ph
+        row = conn.execute("SELECT * FROM llm_cache WHERE cache_key=?",
+                           (f"{r.model}|{ph}|{cfg.seed}",)).fetchone()
+        if row is not None:
+            results[r.custom_id] = LLMResult(
+                text=row["response_text"], tokens_in=row["tokens_in"],
+                tokens_out=row["tokens_out"], latency_ms=row["latency_ms"],
+                cost_usd=row["cost_usd"], prompt_hash=ph, from_cache=True)
+        else:
+            pending.append(r)
+    if not pending:
+        return results
+
+    spent = dbmod.spend_total(conn)
+    est = sum(estimate_cost(cfg, r.model, r.prompt, r.system, r.max_tokens)
+              for r in pending) * BATCH_DISCOUNT
+    if spent >= cfg.spend_cap_usd:
+        raise SpendCapExceeded(f"spend ${spent:.2f} >= cap ${cfg.spend_cap_usd:.2f}")
+    if spent + est > cfg.spend_cap_usd:
+        raise SpendCapExceeded(
+            f"batch estimate ${est:.2f} would exceed cap"
+            f" (${spent:.2f} spent, cap ${cfg.spend_cap_usd:.2f})")
+
+    transport = transport or AnthropicBatchTransport()
+    by_id = {r.custom_id: r for r in pending}
+    for cid, ok, text, tin, tout in transport.run_batch(pending, progress):
+        if not ok:
+            progress(f"  batch item {cid} failed: {text}")
+            continue
+        r = by_id[cid]
+        price = cfg.pricing[r.model]
+        cost = (tin / 1e6 * price.input_per_mtok
+                + tout / 1e6 * price.output_per_mtok) * BATCH_DISCOUNT
+        ph = hashes[cid]
+        conn.execute(
+            "INSERT INTO spend_ledger (model, purpose, tokens_in, tokens_out,"
+            " cost_usd) VALUES (?,?,?,?,?)", (r.model, r.purpose, tin, tout, cost))
+        conn.execute(
+            "INSERT OR REPLACE INTO llm_cache (cache_key, model, prompt_hash, seed,"
+            " response_text, tokens_in, tokens_out, latency_ms, cost_usd)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (f"{r.model}|{ph}|{cfg.seed}", r.model, ph, cfg.seed, text,
+             tin, tout, 0, cost))
+        conn.commit()
+        results[cid] = LLMResult(text=text, tokens_in=tin, tokens_out=tout,
+                                 latency_ms=0, cost_usd=cost, prompt_hash=ph,
+                                 from_cache=False)
+    return results
 
 
 def call_model(cfg: Config, conn: sqlite3.Connection, *, model: str,

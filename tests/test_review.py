@@ -145,3 +145,38 @@ def test_cap_already_reached_blocks_everything(env):
     t = ScriptedTransport([NEG, NEG])
     s = run_reviews(cfg, conn, "r5", transport=t, progress=lambda *a: None)
     assert s["aborted"] is True and s["reviewed"] == 0 and t.calls == 0
+
+
+class FakeBatchTransport:
+    def __init__(self, script):
+        self.script = script  # custom_id -> list of texts (pass1, pass2)
+        self.batches = 0
+
+    def run_batch(self, requests, progress):
+        self.batches += 1
+        out = []
+        for r in requests:
+            texts = self.script.get(r.custom_id, ['{"bad": 1}'])
+            idx = min(self.batches - 1, len(texts) - 1)
+            out.append((r.custom_id, True, texts[idx], 100, 50))
+        return out
+
+
+def test_run_reviews_batch(env):
+    from gym.review import run_reviews_batch
+
+    cfg, conn = env
+    ids = [r[0] for r in conn.execute("SELECT item_id FROM review_items ORDER BY 1")]
+    script = {ids[0]: [NEG], ids[1]: ["garbage", NEG]}  # second item needs re-ask
+    t = FakeBatchTransport(script)
+    s = run_reviews_batch(cfg, conn, "rb1", batch_transport=t,
+                          progress=lambda *a: None)
+    assert s["reviewed"] == 2 and s["reasked"] == 1 and s["abstained"] == 0
+    rows = conn.execute("SELECT * FROM verdicts WHERE run_id='rb1' ORDER BY item_id").fetchall()
+    assert len(rows) == 2
+    reasked = [r for r in rows if r["tokens_in"] == 200]
+    assert len(reasked) == 1  # re-asked item accumulated both calls' tokens
+    # resume: nothing left
+    s2 = run_reviews_batch(cfg, conn, "rb1", batch_transport=t,
+                           progress=lambda *a: None)
+    assert s2["reviewed"] == 0 and s2["skipped"] == 2

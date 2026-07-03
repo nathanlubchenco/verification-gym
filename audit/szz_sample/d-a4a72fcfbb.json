@@ -1,0 +1,23 @@
+{
+ "blamed_lines": {
+  "requests/models.py": [
+   "self.params = dict(params or [])"
+  ]
+ },
+ "class": "MUT-05",
+ "defect_id": "d-a4a72fcfbb",
+ "fix_sha": "bbbeedb0a200d41b0fab33880e97a50d566cdbab",
+ "fix_subject": "fixes issue #349",
+ "ground_truth_locations": [
+  {
+   "end_line": 79,
+   "file": "requests/models.py",
+   "start_line": 79
+  }
+ ],
+ "introducer_sha": "147c24154e4315750f7513ca387f4b843bcc85d2",
+ "introducing_diff": "diff --git a/requests/models.py b/requests/models.py\nindex c38f3799..3a30aa03 100644\n--- a/requests/models.py\n+++ b/requests/models.py\n@@ -76,6 +76,7 @@ class Request(object):\n         #: Dictionary or byte of querystring data to attach to the\n         #: :class:`Request <Request>`.\n         self.params = None\n+        self.params = dict(params or [])\n \n         #: True if :class:`Request <Request>` is part of a redirect chain (disables history\n         #: and HTTPError storage).\n@@ -440,7 +441,7 @@ class Response(object):\n         self.request = None\n \n         #: A dictionary of Cookies the server sent back.\n-        self.cookies = None\n+        self.cookies = {}\n \n         #: Dictionary of configurations for this request.\n         self.config = None\n",
+ "label_rationale": "The commit changed the default initialization of params from None to dict(params or []), altering the default value/behavior for the Request object. This 'better defaults' change introduced an incorrect default handling that broke expected behavior (issue #349).",
+ "repo": "requests",
+ "review_item": "it-a1062e2abd"
+}

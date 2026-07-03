@@ -1,0 +1,226 @@
+{
+ "blamed_lines": {
+  "src/attr/_make.py": [
+   ")",
+   "None,",
+   "bytecode = compile(script, unique_filename, \"exec\")",
+   "eval(bytecode, globs, locs)",
+   "eval(compile(\"\\n\".join(attr_class_template), \"\", \"exec\"), globs)",
+   "globs = {}",
+   "init = locs[\"__attrs_init__\"] if attrs_init else locs[\"__init__\"]",
+   "len(script),",
+   "linecache.cache[unique_filename] = (",
+   "locs = {}",
+   "return locs[\"__eq__\"]",
+   "return locs[\"__hash__\"]",
+   "script.splitlines(True),",
+   "unique_filename,"
+  ]
+ },
+ "class": "GEN-01",
+ "defect_id": "d-5e178e6060",
+ "fix_sha": "1499c77e79315ef8c5c98c088dc3ef99bdba72b4",
+ "fix_subject": "Fix issue with get_type_hints(cls.__init__) and refactor (#760)",
+ "ground_truth_locations": [
+  {
+   "end_line": 14,
+   "file": "src/attr/_make.py",
+   "start_line": 14
+  },
+  {
+   "end_line": 136,
+   "file": "src/attr/_make.py",
+   "start_line": 136
+  },
+  {
+   "end_line": 147,
+   "file": "src/attr/_make.py",
+   "start_line": 147
+  },
+  {
+   "end_line": 174,
+   "file": "src/attr/_make.py",
+   "start_line": 174
+  },
+  {
+   "end_line": 258,
+   "file": "src/attr/_make.py",
+   "start_line": 258
+  },
+  {
+   "end_line": 272,
+   "file": "src/attr/_make.py",
+   "start_line": 272
+  },
+  {
+   "end_line": 314,
+   "file": "src/attr/_make.py",
+   "start_line": 314
+  },
+  {
+   "end_line": 318,
+   "file": "src/attr/_make.py",
+   "start_line": 318
+  },
+  {
+   "end_line": 327,
+   "file": "src/attr/_make.py",
+   "start_line": 327
+  },
+  {
+   "end_line": 357,
+   "file": "src/attr/_make.py",
+   "start_line": 357
+  },
+  {
+   "end_line": 427,
+   "file": "src/attr/_make.py",
+   "start_line": 427
+  },
+  {
+   "end_line": 458,
+   "file": "src/attr/_make.py",
+   "start_line": 458
+  },
+  {
+   "end_line": 491,
+   "file": "src/attr/_make.py",
+   "start_line": 491
+  },
+  {
+   "end_line": 509,
+   "file": "src/attr/_make.py",
+   "start_line": 509
+  },
+  {
+   "end_line": 641,
+   "file": "src/attr/_make.py",
+   "start_line": 641
+  },
+  {
+   "end_line": 680,
+   "file": "src/attr/_make.py",
+   "start_line": 680
+  },
+  {
+   "end_line": 702,
+   "file": "src/attr/_make.py",
+   "start_line": 702
+  },
+  {
+   "end_line": 723,
+   "file": "src/attr/_make.py",
+   "start_line": 720
+  },
+  {
+   "end_line": 732,
+   "file": "src/attr/_make.py",
+   "start_line": 727
+  },
+  {
+   "end_line": 734,
+   "file": "src/attr/_make.py",
+   "start_line": 734
+  },
+  {
+   "end_line": 788,
+   "file": "src/attr/_make.py",
+   "start_line": 785
+  },
+  {
+   "end_line": 797,
+   "file": "src/attr/_make.py",
+   "start_line": 792
+  },
+  {
+   "end_line": 867,
+   "file": "src/attr/_make.py",
+   "start_line": 867
+  },
+  {
+   "end_line": 889,
+   "file": "src/attr/_make.py",
+   "start_line": 888
+  },
+  {
+   "end_line": 917,
+   "file": "src/attr/_make.py",
+   "start_line": 917
+  },
+  {
+   "end_line": 925,
+   "file": "src/attr/_make.py",
+   "start_line": 923
+  },
+  {
+   "end_line": 935,
+   "file": "src/attr/_make.py",
+   "start_line": 935
+  },
+  {
+   "end_line": 944,
+   "file": "src/attr/_make.py",
+   "start_line": 939
+  },
+  {
+   "end_line": 957,
+   "file": "src/attr/_make.py",
+   "start_line": 957
+  },
+  {
+   "end_line": 985,
+   "file": "src/attr/_make.py",
+   "start_line": 985
+  },
+  {
+   "end_line": 1021,
+   "file": "src/attr/_make.py",
+   "start_line": 1021
+  },
+  {
+   "end_line": 1104,
+   "file": "src/attr/_make.py",
+   "start_line": 1103
+  },
+  {
+   "end_line": 1173,
+   "file": "src/attr/_make.py",
+   "start_line": 1173
+  },
+  {
+   "end_line": 1203,
+   "file": "src/attr/_make.py",
+   "start_line": 1203
+  },
+  {
+   "end_line": 1244,
+   "file": "src/attr/_make.py",
+   "start_line": 1244
+  },
+  {
+   "end_line": 1265,
+   "file": "src/attr/_make.py",
+   "start_line": 1265
+  },
+  {
+   "end_line": 1380,
+   "file": "src/attr/_make.py",
+   "start_line": 1380
+  },
+  {
+   "end_line": 1388,
+   "file": "src/attr/_make.py",
+   "start_line": 1388
+  },
+  {
+   "end_line": 1427,
+   "file": "src/attr/_make.py",
+   "start_line": 1427
+  }
+ ],
+ "introducer_sha": "cd8890c744c8d78b6e75fbd1d492237d2a6a7e73",
+ "introducing_diff": "diff --git a/changelog.d/306.change.rst b/changelog.d/306.change.rst\nnew file mode 100644\nindex 0000000..ef2e75e\n--- /dev/null\n+++ b/changelog.d/306.change.rst\n@@ -0,0 +1 @@\n+Equality tests are *much* faster now.\ndiff --git a/src/attr/_make.py b/src/attr/_make.py\nindex 31c5f94..3ea0501 100644\n--- a/src/attr/_make.py\n+++ b/src/attr/_make.py\n@@ -701,7 +701,7 @@ def _make_hash(attrs):\n         if a.hash is True or (a.hash is None and a.cmp is True)\n     )\n \n-    # We cache the generated init methods for the same kinds of attributes.\n+    # We cache the generated hash methods for the same kinds of attributes.\n     sha1 = hashlib.sha1()\n     sha1.update(repr(attrs).encode(\"utf-8\"))\n     unique_filename = \"<attrs generated hash %s>\" % (sha1.hexdigest(),)\n@@ -742,34 +742,68 @@ def _add_hash(cls, attrs):\n     return cls\n \n \n+def _ne(self, other):\n+    \"\"\"\n+    Check equality and either forward a NotImplemented or return the result\n+    negated.\n+    \"\"\"\n+    result = self.__eq__(other)\n+    if result is NotImplemented:\n+        return NotImplemented\n+\n+    return not result\n+\n+\n def _make_cmp(attrs):\n     attrs = [a for a in attrs if a.cmp]\n \n+    # We cache the generated eq methods for the same kinds of attributes.\n+    sha1 = hashlib.sha1()\n+    sha1.update(repr(attrs).encode(\"utf-8\"))\n+    unique_filename = \"<attrs generated eq %s>\" % (sha1.hexdigest(),)\n+    lines = [\n+        \"def __eq__(self, other):\",\n+        \"    if other.__class__ is not self.__class__:\",\n+        \"        return NotImplemented\",\n+    ]\n+    # We can't just do a big self.x = other.x and... clause due to\n+    # irregularities like nan == nan is false but (nan,) == (nan,) is true.\n+    if attrs:\n+        lines.append(\"    return  (\")\n+        others = [\n+            \"    ) == (\",\n+        ]\n+        for a in attrs:\n+            lines.append(\"        self.%s,\" % (a.name,))\n+            others.append(\"        other.%s,\" % (a.name,))\n+\n+        lines += others + [\"    )\"]\n+    else:\n+        lines.append(\"    return True\")\n+\n+    script = \"\\n\".join(lines)\n+    globs = {}\n+    locs = {}\n+    bytecode = compile(script, unique_filename, \"exec\")\n+    eval(bytecode, globs, locs)\n+\n+    # In order of debuggers like PDB being able to step through the code,\n+    # we add a fake linecache entry.\n+    linecache.cache[unique_filename] = (\n+        len(script),\n+        None,\n+        script.splitlines(True),\n+        unique_filename,\n+    )\n+    eq = locs[\"__eq__\"]\n+    ne = _ne\n+\n     def attrs_to_tuple(obj):\n         \"\"\"\n         Save us some typing.\n         \"\"\"\n         return _attrs_to_tuple(obj, attrs)\n \n-    def eq(self, other):\n-        \"\"\"\n-        Automatically created by attrs.\n-        \"\"\"\n-        if other.__class__ is self.__class__:\n-            return attrs_to_tuple(self) == attrs_to_tuple(other)\n-        else:\n-            return NotImplemented\n-\n-    def ne(self, other):\n-        \"\"\"\n-        Automatically created by attrs.\n-        \"\"\"\n-        result = eq(self, other)\n-        if result is NotImplemented:\n-            return NotImplemented\n-        else:\n-            return not result\n-\n     def lt(self, other):\n         \"\"\"\n         Automatically created by attrs.\n",
+ "label_rationale": "The generated `__eq__` compares attribute tuples but drops the special handling captured by the original comment about nan == nan being false while (nan,) == (nan,) being true; wrapping single values in a parenthesized tuple works, but the semantics of comparison edge cases were subtly changed by moving from tuple-of-attrs comparison to inline tuple construction. This is a subtle semantic error in the equality domain logic rather than a mechanical swap or boundary issue.",
+ "repo": "attrs",
+ "review_item": "it-84984942ea"
+}

@@ -1,0 +1,34 @@
+{
+ "blamed_lines": {
+  "jinja/filters.py": [
+   "'batch':                do_batch",
+   "*New in Jinja 1.1*"
+  ]
+ },
+ "class": "GEN-01",
+ "defect_id": "d-83c0491ab2",
+ "fix_sha": "eec3138d28317e0ccd76640be6e6624675f3e78a",
+ "fix_subject": "[svn] implemented some of the builtin functions as filters (namely sum, abs and round). this fixes #238",
+ "ground_truth_locations": [
+  {
+   "end_line": 639,
+   "file": "jinja/filters.py",
+   "start_line": 639
+  },
+  {
+   "end_line": 680,
+   "file": "jinja/filters.py",
+   "start_line": 680
+  },
+  {
+   "end_line": 737,
+   "file": "jinja/filters.py",
+   "start_line": 737
+  }
+ ],
+ "introducer_sha": "d071f9587646501ec9d68c7aa1d24a21cfe0664a",
+ "introducing_diff": "diff --git a/CHANGES b/CHANGES\nindex 18545e5a..ed389413 100644\n--- a/CHANGES\n+++ b/CHANGES\n@@ -35,6 +35,10 @@ Version 1.1\n - fixed severe memcaching bug. Formerly it wasn't possible to use memcaching\n   without enabling disk cache.\n \n+- fixed a bug that allowed users to override the special names `_`, `true` etc.\n+\n+- added `batch` and `slice` filters\n+\n \n Version 1.0\n -----------\ndiff --git a/docs/src/index.txt b/docs/src/index.txt\nindex 6253ec8f..9e9ad4c5 100644\n--- a/docs/src/index.txt\n+++ b/docs/src/index.txt\n@@ -30,7 +30,7 @@ Welcome in the Jinja documentation.\n \n   - `Internationalization <i18n.txt>`_\n \n-  - `Recipies <devrecipies.txt>`_\n+  - `Developer Recipies <devrecipies.txt>`_\n \n - Template Designer Documentation:\n \n@@ -38,6 +38,6 @@ Welcome in the Jinja documentation.\n \n   - `Differences To Django <fromdjango.txt>`_\n \n-  - `Recipies <recipies.txt>`_\n+  - `Designer Recipies <recipies.txt>`_\n \n There is also support via IRC on the ``#pocoo`` channel on `irc.freenode.net`.\ndiff --git a/jinja/filters.py b/jinja/filters.py\nindex f54aaa19..e77b8912 100644\n--- a/jinja/filters.py\n+++ b/jinja/filters.py\n@@ -618,6 +618,83 @@ def do_capture(name='captured', clean=False):\n     return wrapped\n \n \n+def do_slice(slices, fill_with=None):\n+    \"\"\"\n+    Slice an iterator and return a list of lists containing\n+    those items. Useful if you want to create a div containing\n+    three div tags that represent columns:\n+\n+    .. sourcecode:: jinja\n+\n+        <div class=\"columwrapper\">\n+          {%- for column in items|slice(3) %}\n+            <ul class=\"column-{{ loop.index }}\">\n+            {%- for item in column %}\n+              <li>{{ item }}</li>\n+            {%- endfor %}\n+            </ul>\n+          {%- endfor %}\n+        </div>\n+\n+    *New in Jinja 1.1*\n+    \"\"\"\n+    def wrapped(env, context, value):\n+        result = []\n+        seq = list(value)\n+        length = len(seq)\n+        items_per_slice = length // slices\n+        slices_with_extra = length % slices\n+        offset = 0\n+        for slice_number in xrange(slices):\n+            start = offset + slice_number * items_per_slice\n+            if slice_number < slices_with_extra:\n+                offset += 1\n+            end = offset + (slice_number + 1) * items_per_slice\n+            tmp = seq[start:end]\n+            if fill_with is not None and slice_number >= slices_with_extra:\n+                tmp.append(fill_with)\n+            result.append(tmp)\n+        return result\n+    return wrapped\n+\n+\n+def do_batch(linecount, fill_with=None):\n+    \"\"\"\n+    A filter that batches items. It works pretty much like `slice`\n+    just the other way round. It returns a list of lists with the\n+    given number of items. If you provide a second parameter this\n+    is used to fill missing items. See this example:\n+\n+    .. sourcecode:: jinja\n+\n+        <table>\n+        {%- for row in items|batch(3, '&nbsp;') %}\n+          <tr>\n+          {%- for column in row %}\n+            <tr>{{ column }}</td>\n+          {%- endfor %}\n+          </tr>\n+        {%- endfor %}\n+        </table>\n+\n+    *New in Jinja 1.1*\n+    \"\"\"\n+    def wrapped(env, context, value):\n+        result = []\n+        tmp = []\n+        for item in value:\n+            if len(tmp) == linecount:\n+                result.append(tmp)\n+                tmp = []\n+            tmp.append(item)\n+        if tmp:\n+            if fill_with is not None and len(tmp) < linecount:\n+                tmp += [fill_with] * (linecount - len(tmp))\n+            result.append(tmp)\n+        return result\n+    return wrapped\n+\n+\n FILTERS = {\n     'replace':              do_replace,\n     'upper':                do_upper,\n@@ -655,5 +732,7 @@ FILTERS = {\n     'urlize':               do_urlize,\n     'format':               do_format,\n     'capture':              do_capture,\n-    'trim':                 do_trim\n+    'trim':                 do_trim,\n+    'slice':                do_slice,\n+    'batch':                do_batch\n }\ndiff --git a/tests/runtime/columntest.py b/tests/runtime/columntest.py\nnew file mode 100644\nindex 00000000..ebb00fc4\n--- /dev/null\n+++ b/tests/runtime/columntest.py\n@@ -0,0 +1,57 @@\n+import jdebug\n+from jinja import from_string\n+\n+\n+template = from_string(u'''\\\n+<h1>Unfilled</h1>\n+<div class=\"index\">\n+  {%- for column in items|slice(3) %}\n+  <div class=\"col-{{ loop.index }}\">\n+    <ul>\n+    {%- for item in column %}\n+      <li>{{ item }}</li>\n+    {%- endfor %}\n+    </ul>\n+  </div>\n+  {%- endfor %}\n+</div>\n+\n+<h1>Filled</h1>\n+<div class=\"index\">\n+  {%- for column in items|slice(3, 'missing') %}\n+  <div class=\"col-{{ loop.index }}\">\n+    <ul>\n+    {%- for item in column %}\n+      <li>{{ item }}</li>\n+    {%- endfor %}\n+    </ul>\n+  </div>\n+  {%- endfor %}\n+</div>\n+\n+<h1>Filled Table</h1>\n+<table>\n+  {%- for row in items|batch(3, '&nbsp;') %}\n+  <tr>\n+    {%- for column in row %}\n+    <td>{{ column }}</td>\n+    {%- endfor %}\n+  </tr>\n+  {%- endfor %}\n+</table>\n+\n+<h1>Unfilled Table</h1>\n+<table>\n+  {%- for row in items|batch(3) %}\n+  <tr>\n+    {%- for column in row %}\n+    <td>{{ column }}</td>\n+    {%- endfor %}\n+    {%- if row|length < 3 %}\n+    <td colspan=\"{{ 3 - (row|length) }}\">&nbsp;</td>\n+    {%- endif %}\n+  </tr>\n+  {%- endfor %}\n+</table>''')\n+\n+print template.render(items=range(16))\n",
+ "label_rationale": "The `do_slice` filter's index arithmetic is subtly wrong: it applies `offset` (which accumulates extra items) to both start and end while also multiplying by `items_per_slice`, causing incorrect slice boundaries when items don't divide evenly. This is a domain-logic edge-case error in computing slice ranges rather than a simple off-by-one or operator swap.",
+ "repo": "jinja2",
+ "review_item": "it-582d07afda"
+}

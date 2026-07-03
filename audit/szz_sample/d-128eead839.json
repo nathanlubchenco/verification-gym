@@ -1,0 +1,35 @@
+{
+ "blamed_lines": {
+  "requests/sessions.py": [
+   "def resolve_redirects(self, resp, req, stream=False, timeout=None, verify=True, cert=None, proxies=None):",
+   "gen = self.resolve_redirects(resp, req, stream=stream, timeout=timeout, verify=verify, cert=cert, proxies=proxies)",
+   "history = [r for r in gen] if allow_redirects else []",
+   "history.insert(0, resp)",
+   "if history:",
+   "resp = history.pop()",
+   "resp = self.send(prep, stream=stream, timeout=timeout, verify=verify, cert=cert, proxies=proxies)",
+   "resp.history = tuple(history)"
+  ]
+ },
+ "class": "GEN-01",
+ "defect_id": "d-128eead839",
+ "fix_sha": "a95bfd30324b59f54de7b18ae6209aecfe5c87fc",
+ "fix_subject": "Fix the elapsed test and #1133",
+ "ground_truth_locations": [
+  {
+   "end_line": 259,
+   "file": "requests/sessions.py",
+   "start_line": 259
+  },
+  {
+   "end_line": 263,
+   "file": "requests/sessions.py",
+   "start_line": 261
+  }
+ ],
+ "introducer_sha": "0d183c41a9ea3afd22e789932d43c7c111eb8ef5",
+ "introducing_diff": "diff --git a/requests/sessions.py b/requests/sessions.py\nindex f8f83fbe..23e46312 100644\n--- a/requests/sessions.py\n+++ b/requests/sessions.py\n@@ -68,10 +68,6 @@ class SessionMixin(object):\n     def resolve_redirects(self, resp, req, prefetch=True, timeout=None, verify=True, cert=None):\n         \"\"\"Receives a Response. Returns a generator of Responses.\"\"\"\n \n-        print resp\n-        print req\n-        print resp.headers['location']\n-        print resp.status_code\n \n         # ((resp.status_code is codes.see_other))\n         while (('location' in resp.headers and resp.status_code in REDIRECT_STATI)):\n@@ -257,12 +253,15 @@ class Session(SessionMixin):\n \n         resp = self.send(prep)\n \n-        if allow_redirects:\n-            gen = self.resolve_redirects(resp, req, prefetch, timeout, verify, cert)\n+        # Redirect generator.\n+        gen = self.resolve_redirects(resp, req, prefetch, timeout, verify, cert)\n \n-            history = [r for r in gen]\n+        history = [r for r in gen] if allow_redirects else []\n \n-            print history\n+        if history:\n+            history.insert(0, resp)\n+            resp = history.pop()\n+            resp.history = history\n \n         return resp\n \n",
+ "label_rationale": "The refactored redirect handling reassembles history by inserting the initial response and popping the last, changing the semantics of how the final response and its .history are constructed. This subtle domain-logic error in edge-case response/history assembly caused issue #1133 needing a fix.",
+ "repo": "requests",
+ "review_item": "it-0a8e9228fd"
+}

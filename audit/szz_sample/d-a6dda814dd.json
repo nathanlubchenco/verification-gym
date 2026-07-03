@@ -1,0 +1,44 @@
+{
+ "blamed_lines": {
+  "tests/test_compat.py": [
+   "@click.command()",
+   "@click.option('--foo', callback=legacy_callback)",
+   "assert 'WAT' in result.output",
+   "assert result.exit_code == 0",
+   "click.echo(foo)",
+   "def cli(foo):",
+   "def legacy_callback(ctx, value):",
+   "def test_legacy_callbacks(runner):",
+   "if click.__version__ >= '3.0':",
+   "result = runner.invoke(cli, ['--foo', 'wat'])",
+   "return value.upper()",
+   "with pytest.warns(Warning, match='Invoked legacy parameter callback'):"
+  ]
+ },
+ "class": "GEN-03",
+ "defect_id": "d-a6dda814dd",
+ "fix_sha": "06d030811da54f0c336a59c85818fe26313e1dda",
+ "fix_subject": "enable colored output on Jupyter notebooks on UNIX",
+ "ground_truth_locations": [
+  {
+   "end_line": 8,
+   "file": "tests/test_compat.py",
+   "start_line": 5
+  },
+  {
+   "end_line": 13,
+   "file": "tests/test_compat.py",
+   "start_line": 10
+  },
+  {
+   "end_line": 18,
+   "file": "tests/test_compat.py",
+   "start_line": 15
+  }
+ ],
+ "introducer_sha": "20b4b1c0d1564ab4ef44b7d27d5b650735e28be3",
+ "introducing_diff": "diff --git a/tests/test_basic.py b/tests/test_basic.py\nindex 045f608..960cd32 100644\n--- a/tests/test_basic.py\n+++ b/tests/test_basic.py\n@@ -357,7 +357,7 @@ def test_required_option(runner):\n def test_evaluation_order(runner):\n     called = []\n \n-    def memo(ctx, value):\n+    def memo(ctx, param, value):\n         called.append(value)\n         return value\n \ndiff --git a/tests/test_compat.py b/tests/test_compat.py\nindex e4ecdc8..9dacc21 100644\n--- a/tests/test_compat.py\n+++ b/tests/test_compat.py\n@@ -1,4 +1,5 @@\n import click\n+import pytest\n \n \n if click.__version__ >= '3.0':\n@@ -11,10 +12,10 @@ if click.__version__ >= '3.0':\n         def cli(foo):\n             click.echo(foo)\n \n-        result = runner.invoke(cli, ['--foo', 'wat'])\n-        assert result.exit_code == 0\n-        assert 'WAT' in result.output\n-        assert 'Invoked legacy parameter callback' in result.output\n+        with pytest.warns(Warning, match='Invoked legacy parameter callback'):\n+            result = runner.invoke(cli, ['--foo', 'wat'])\n+            assert result.exit_code == 0\n+            assert 'WAT' in result.output\n \n \n def test_bash_func_name():\ndiff --git a/tests/test_options.py b/tests/test_options.py\nindex 9dd8cdf..8bdda1f 100644\n--- a/tests/test_options.py\n+++ b/tests/test_options.py\n@@ -199,7 +199,7 @@ def test_nargs_envvar(runner):\n \n \n def test_custom_validation(runner):\n-    def validate_pos_int(ctx, value):\n+    def validate_pos_int(ctx, param, value):\n         if value < 0:\n             raise click.BadParameter('Value needs to be positive')\n         return value\n",
+ "label_rationale": "The test change in test_compat.py removed the assertion 'assert \"Invoked legacy parameter callback\" in result.output' and replaced it with a pytest.warns context, weakening the original verification of the output content. This loosens the test coverage of the legacy callback behavior.",
+ "repo": "click",
+ "review_item": "it-37933d168d"
+}

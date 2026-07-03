@@ -100,10 +100,13 @@ def cmd_leakcheck(args) -> int:
 
 
 def cmd_review(args) -> int:
-    from .review import run_reviews
+    from .review import run_reviews, run_reviews_batch
 
     cfg, conn = _open(args)
-    s = run_reviews(cfg, conn, args.run_id, cache_only=args.cache_only)
+    if args.batch:
+        s = run_reviews_batch(cfg, conn, args.run_id)
+    else:
+        s = run_reviews(cfg, conn, args.run_id, cache_only=args.cache_only)
     print(json.dumps(s, indent=1))
     return 3 if s["aborted"] else 0
 
@@ -259,6 +262,8 @@ def main(argv=None) -> int:
     p = sub.add_parser("review", help="run the verifier over review items")
     p.add_argument("--run-id", default=DEFAULT_RUN_ID)
     p.add_argument("--cache-only", action="store_true")
+    p.add_argument("--batch", action="store_true",
+                   help="use the Message Batches API (50%% price; D17)")
     p.set_defaults(func=cmd_review)
 
     p = sub.add_parser("score", help="compute §7 metrics + emit event stream")
