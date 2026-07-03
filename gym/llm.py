@@ -50,6 +50,8 @@ class AnthropicTransport:
         self._client = anthropic.Anthropic()
 
     def complete(self, *, model, system, prompt, max_tokens):
+        import anthropic
+
         kwargs: dict[str, Any] = dict(
             model=model, max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
@@ -57,7 +59,14 @@ class AnthropicTransport:
         if system:
             kwargs["system"] = system
         start = time.monotonic()
-        resp = self._client.messages.create(**kwargs)
+        try:
+            resp = self._client.messages.create(**kwargs)
+        except anthropic.BadRequestError as exc:
+            if "credit balance" in str(exc).lower():
+                # account-level billing stop: abort cleanly like a cap hit;
+                # everything resumes once the operator adds credits
+                raise SpendCapExceeded(f"account credit exhausted: {exc}") from exc
+            raise
         latency_ms = int((time.monotonic() - start) * 1000)
         text = "".join(b.text for b in resp.content if b.type == "text")
         return {
