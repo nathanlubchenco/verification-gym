@@ -83,8 +83,10 @@ def _charts(scores: dict, charts_dir: Path) -> list[str]:
     if cost:
         keys = sorted(cost)
         fig, ax = plt.subplots(figsize=(max(6, 0.6 * len(keys)), 3.5))
-        ax.bar(keys, [cost[k]["mean_cost_usd"] for k in keys], color="#7a5aa0")
+        ax.bar(range(len(keys)), [cost[k]["mean_cost_usd"] for k in keys],
+               color="#7a5aa0")
         ax.set_ylabel("mean cost / review (USD)")
+        ax.set_xticks(range(len(keys)))
         ax.set_xticklabels(keys, rotation=45, ha="right", fontsize=8)
         ax.set_title("Cost per review by class")
         fig.tight_layout()
