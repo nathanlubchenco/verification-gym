@@ -94,6 +94,48 @@ def estimate_cost(cfg: Config, model: str, prompt: str, system: str | None,
     return est_in / 1e6 * price.input_per_mtok + max_tokens / 1e6 * price.output_per_mtok
 
 
+class OpenAITransport:
+    """OpenAI chat-completions transport for cross-model runs. gpt-5.x models
+    spend completion tokens on internal reasoning, so callers' max_tokens is
+    treated as a floor and given headroom (D18)."""
+
+    REASONING_HEADROOM = 2500
+
+    def __init__(self) -> None:
+        from openai import OpenAI
+
+        self._client = OpenAI()
+
+    def complete(self, *, model, system, prompt, max_tokens):
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        start = time.monotonic()
+        resp = self._client.chat.completions.create(
+            model=model, messages=messages,
+            max_completion_tokens=max_tokens + self.REASONING_HEADROOM,
+        )
+        latency_ms = int((time.monotonic() - start) * 1000)
+        return {
+            "text": resp.choices[0].message.content or "",
+            "tokens_in": resp.usage.prompt_tokens,
+            "tokens_out": resp.usage.completion_tokens,
+            "latency_ms": latency_ms,
+        }
+
+
+_default_transports: dict[str, Transport] = {}
+
+
+def transport_for(model: str) -> Transport:
+    kind = "openai" if model.startswith(("gpt-", "o1", "o3", "o4")) else "anthropic"
+    if kind not in _default_transports:
+        _default_transports[kind] = (OpenAITransport() if kind == "openai"
+                                     else AnthropicTransport())
+    return _default_transports[kind]
+
+
 _default_transport: Transport | None = None
 
 
@@ -240,10 +282,7 @@ def call_model(cfg: Config, conn: sqlite3.Connection, *, model: str,
         )
 
     if transport is None:
-        global _default_transport
-        if _default_transport is None:
-            _default_transport = AnthropicTransport()
-        transport = _default_transport
+        transport = transport_for(model)
 
     out = transport.complete(model=model, system=system, prompt=prompt,
                              max_tokens=max_tokens)

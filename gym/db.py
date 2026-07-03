@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS gen_attempts (
     outcome TEXT NOT NULL,       -- accepted | suite_caught | parse_failure |
                                  -- anchor_failure | invalid_edit | oversized_payload
     note TEXT,
+    generator TEXT,
     ts TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS carrier_baselines (

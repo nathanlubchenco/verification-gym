@@ -219,10 +219,11 @@ def baseline_ok(cfg: Config, conn: sqlite3.Connection, repo: str,
     return ok
 
 
-def _record_attempt(conn, klass, repo, sha, outcome, note=""):
+def _record_attempt(conn, klass, repo, sha, outcome, note="", generator=None):
     conn.execute(
-        "INSERT INTO gen_attempts (class, repo, sha, outcome, note) VALUES (?,?,?,?,?)",
-        (klass, repo, sha, outcome, note[:300]))
+        "INSERT INTO gen_attempts (class, repo, sha, outcome, note, generator)"
+        " VALUES (?,?,?,?,?,?)",
+        (klass, repo, sha, outcome, note[:300], generator))
     conn.commit()
 
 
@@ -322,7 +323,7 @@ def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
                 files[f] = gitrepo.file_at(repo_dir, sha, f)
         if not files or (klass == "GEN-03"
                          and not any(is_test_file(f) for f in files)):
-            _record_attempt(conn, klass, repo, sha, "invalid_edit", "no usable files")
+            _record_attempt(conn, klass, repo, sha, "invalid_edit", "no usable files", cfg.generator_model)
             continue
 
         prompt = build_gen_prompt(klass, msg, diff, files)
@@ -335,25 +336,25 @@ def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
             break
         edit_spec = parse_gen_edit(r.text)
         if edit_spec is None:
-            _record_attempt(conn, klass, repo, sha, "parse_failure")
+            _record_attempt(conn, klass, repo, sha, "parse_failure", generator=cfg.generator_model)
             continue
         path = edit_spec["file"].removeprefix("b/").removeprefix("./")
         if path not in files:
-            _record_attempt(conn, klass, repo, sha, "anchor_failure", f"file {path}")
+            _record_attempt(conn, klass, repo, sha, "anchor_failure", f"file {path}", cfg.generator_model)
             continue
         if klass == "GEN-03" and not is_test_file(path):
             _record_attempt(conn, klass, repo, sha, "invalid_edit",
-                            "GEN-03 edit not in a test file")
+                            "GEN-03 edit not in a test file", cfg.generator_model)
             continue
         if not _valid_python_edit(files[path], edit_spec["old"], edit_spec["new"]):
             _record_attempt(conn, klass, repo, sha, "anchor_failure",
-                            "snippet not unique/valid")
+                            "snippet not unique/valid", cfg.generator_model)
             continue
         edit = Edit(path=path, old=edit_spec["old"], new=edit_spec["new"])
         try:
             change = build_injected_change(repo_dir, sha, [edit])
         except InjectionError as exc:
-            _record_attempt(conn, klass, repo, sha, "anchor_failure", str(exc))
+            _record_attempt(conn, klass, repo, sha, "anchor_failure", str(exc), cfg.generator_model)
             continue
 
         suite_checked = False
@@ -361,7 +362,7 @@ def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
             suite_checked = True
             ok, secs, note = _run_pytest_at(cfg, repo, sha, [edit])
             if not ok:
-                _record_attempt(conn, klass, repo, sha, "suite_caught", note)
+                _record_attempt(conn, klass, repo, sha, "suite_caught", note, cfg.generator_model)
                 continue
 
         description = (edit_spec["new_description"]
@@ -381,9 +382,9 @@ def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
         if item_id is None:
             conn.execute("DELETE FROM defect_records WHERE defect_id=?", (defect_id,))
             conn.commit()
-            _record_attempt(conn, klass, repo, sha, "oversized_payload")
+            _record_attempt(conn, klass, repo, sha, "oversized_payload", generator=cfg.generator_model)
             continue
-        _record_attempt(conn, klass, repo, sha, "accepted")
+        _record_attempt(conn, klass, repo, sha, "accepted", generator=cfg.generator_model)
         made[klass] += 1
         if sum(made.values()) % 10 == 0:
             progress(f"gen: totals {made}")
