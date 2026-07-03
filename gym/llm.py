@@ -76,7 +76,9 @@ def prompt_hash(model: str, system: str | None, prompt: str, max_tokens: int) ->
 def estimate_cost(cfg: Config, model: str, prompt: str, system: str | None,
                   max_tokens: int) -> float:
     price = cfg.pricing[model]
-    est_in = (len(prompt) + len(system or "")) / 3.6  # chars->tokens heuristic
+    # 2.5 chars/token: conservative for code-heavy prompts (measured 2.68 mean
+    # across validated repos, Phase 0) so the pre-call cap guard over-estimates.
+    est_in = (len(prompt) + len(system or "")) / 2.5
     return est_in / 1e6 * price.input_per_mtok + max_tokens / 1e6 * price.output_per_mtok
 
 

@@ -12,6 +12,17 @@ RECORD_SEP = "\x1e"
 FIELD_SEP = "\x1f"
 
 
+def parse_git_date(s: str) -> datetime:
+    """ISO date from git %aI. Git preserves corrupt author timezones (e.g.
+    '+518:00' in old requests history); fall back to UTC on bad offsets."""
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        from datetime import timezone
+
+        return datetime.fromisoformat(s[:19]).replace(tzinfo=timezone.utc)
+
+
 class GitError(RuntimeError):
     pass
 
@@ -98,7 +109,7 @@ def log_commits(
         sha, date_s, subject, body = header.split(FIELD_SEP, 3)
         files = [ln.strip() for ln in files_blob.splitlines() if ln.strip()]
         commits.append(
-            Commit(sha=sha.strip(), date=datetime.fromisoformat(date_s),
+            Commit(sha=sha.strip(), date=parse_git_date(date_s),
                    subject=subject, body=body.strip(), files=sorted(files))
         )
     return commits
@@ -125,7 +136,7 @@ def first_commit_date(repo: Path | str) -> datetime:
     # rev-list --max-parents=0 finds root commit(s); take the oldest.
     roots = run_git(repo, "rev-list", "--max-parents=0", "HEAD").split()
     dates = [
-        datetime.fromisoformat(run_git(repo, "show", "-s", "--format=%aI", r).strip())
+        parse_git_date(run_git(repo, "show", "-s", "--format=%aI", r).strip())
         for r in roots
     ]
     return min(dates)
