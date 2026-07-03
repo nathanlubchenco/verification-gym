@@ -98,13 +98,17 @@ def _charts(scores: dict, charts_dir: Path) -> list[str]:
 
 def render_report(cfg: Config, run_id: str, scores: dict, spend_usd: float,
                   charts: list[str], generated_at: str) -> str:
+    # spend_usd is ledger-global (moves with unrelated runs) so it is NOT
+    # rendered — REPORT.md must stay byte-reproducible per run (§14.4).
+    # Run-scoped cost appears in the cost-per-review table; cumulative spend
+    # lives in the phase reports.
     L: list[str] = []
     L.append("# Verification Gym REPORT")
     L.append("")
     L.append(f"Generated: {generated_at}")
     L.append("")
     L.append(f"run_id: `{run_id}` · seed: {cfg.seed} · verifier: `{cfg.verifier_model}`"
-             f" · generator: `{cfg.generator_model}` · cumulative spend: ${spend_usd:.2f}")
+             f" · generator: `{cfg.generator_model}`")
     L.append("")
     L.append("## MEASURED (computed numbers; §7 pre-specified)")
     L.append("")
