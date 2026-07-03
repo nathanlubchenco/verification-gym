@@ -234,7 +234,7 @@ def _repo_speed_order(conn) -> dict[str, float]:
 
 
 def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
-                 only_class: str | None = None,
+                 only_class: str | None = None, recent_first: bool = False,
                  progress=print) -> dict[str, int]:
     """Generate GEN defects. With only_class set, restrict to that class —
     this is the unit of process-level parallelism (one process per class).
@@ -276,7 +276,15 @@ def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
         "SELECT * FROM commit_pool WHERE assigned_to='GEN_CARRIER'"
         " ORDER BY repo, sha").fetchall())
     rng.shuffle(carriers)
-    carriers.sort(key=lambda r: speed.get(r["repo"], 999.0))
+    if recent_first:
+        # top-up mode: maximize suite-gate feasibility — newest carriers first,
+        # repos with infeasible suites (requests) last
+        carriers.sort(key=lambda r: (r["repo"] == "requests",
+                                     r["commit_date"] or ""), reverse=False)
+        carriers.sort(key=lambda r: r["commit_date"] or "", reverse=True)
+        carriers.sort(key=lambda r: r["repo"] == "requests")
+    else:
+        carriers.sort(key=lambda r: speed.get(r["repo"], 999.0))
     test_carriers = [c for c in carriers
                      if any(is_test_file(f) and f.endswith(".py")
                             for f in json.loads(c["files_json"]))]
