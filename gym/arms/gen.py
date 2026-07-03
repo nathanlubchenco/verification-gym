@@ -246,29 +246,39 @@ def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
 
     classes = [only_class] if only_class else GEN_CLASSES
     rng = random.Random(f"{cfg.seed}:gen:{only_class or 'all'}")
+    gen_method = f"gen:{cfg.generator_model}"
+    # All counters are scoped to THIS generator: each generator populates its
+    # own GEN cell independently (D18). Attempt rows written before the
+    # generator column existed are NULL and belong to the claude-opus-4-8 wave.
+    gen_clause = ("(generator = ? OR generator IS NULL)"
+                  if cfg.generator_model.startswith("claude") else "generator = ?")
     made = {k: 0 for k in classes}
     for row in conn.execute(
             "SELECT d.class k, COUNT(*) c FROM defect_records d JOIN review_items i"
-            " ON i.defect_id=d.defect_id WHERE d.arm='GEN' GROUP BY 1"):
+            " ON i.defect_id=d.defect_id WHERE d.arm='GEN' AND d.injection_method=?"
+            " GROUP BY 1", (gen_method,)):
         if row["k"] in made:
             made[row["k"]] = row["c"]
     attempts = {k: 0 for k in classes}
-    for row in conn.execute("SELECT class k, COUNT(*) c FROM gen_attempts GROUP BY 1"):
+    for row in conn.execute(
+            f"SELECT class k, COUNT(*) c FROM gen_attempts WHERE {gen_clause}"
+            " GROUP BY 1", (cfg.generator_model,)):
         if row["k"] in attempts:
             attempts[row["k"]] = row["c"]
     budget = {k: MAX_ATTEMPTS_PER_CLASS_FACTOR * n_per_class for k in classes}
 
-    # per-class no-reuse: skip carriers already attempted/used by these classes
+    # per-class no-reuse within this generator's cell; cross-generator reuse ok
     used_by_class: dict[str, set[str]] = {k: set() for k in classes}
     q_marks = ",".join("?" for _ in classes)
     for row in conn.execute(
-            f"SELECT class k, sha FROM gen_attempts WHERE class IN ({q_marks})",
-            classes):
+            f"SELECT class k, sha FROM gen_attempts WHERE class IN ({q_marks})"
+            f" AND {gen_clause}", (*classes, cfg.generator_model)):
         if row["k"] in used_by_class:
             used_by_class[row["k"]].add(row["sha"])
     for row in conn.execute(
             f"SELECT class k, carrier_sha sha FROM defect_records"
-            f" WHERE arm='GEN' AND class IN ({q_marks})", classes):
+            f" WHERE arm='GEN' AND injection_method=? AND class IN ({q_marks})",
+            (gen_method, *classes)):
         if row["k"] in used_by_class and row["sha"]:
             used_by_class[row["k"]].add(row["sha"])
 
