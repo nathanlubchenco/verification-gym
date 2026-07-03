@@ -148,9 +148,13 @@ def _venv_python(cfg: Config, repo: str) -> Path:
 
 
 def _run_pytest_at(cfg: Config, repo: str, sha: str,
-                   edits: list[Edit] | None) -> tuple[bool, float, str]:
-    """Run the repo's suite at `sha` (+ optional edits) in a temp worktree,
-    using the validation venv with the worktree shadowing site-packages."""
+                   edits: list[Edit] | None,
+                   diff_text: str | None = None) -> tuple[bool, float, str]:
+    """Run the repo's suite at `sha` (+ optional edits or a raw diff) in a temp
+    worktree, using the validation venv with the worktree shadowing
+    site-packages. Deprecation-class warnings are ignored uniformly: the gate
+    asks whether the *defect* breaks tests, not whether era-old code satisfies
+    a newer pytest's deprecation policy."""
     repo_dir = cfg.root / cfg.data_dir / "repos" / repo
     py = _venv_python(cfg, repo)
     if not py.exists():
@@ -163,13 +167,32 @@ def _run_pytest_at(cfg: Config, repo: str, sha: str,
             for e in edits or []:
                 target = wt / e.path
                 target.write_text(target.read_text().replace(e.old, e.new, 1))
+            if diff_text:
+                proc = subprocess.run(
+                    ["git", "-C", str(wt), "apply", "-"], input=diff_text,
+                    capture_output=True, text=True)
+                if proc.returncode != 0:
+                    return False, 0.0, f"diff apply failed: {proc.stderr[:120]}"
             env = dict(os.environ)
             src = wt / "src"
             env["PYTHONPATH"] = f"{src}:{wt}" if src.exists() else str(wt)
+            # confine collection to the real suite: old commits carry py2-era
+            # examples/ named test_*.py that crash pytest collection. Layouts
+            # vary by era; ancient commits that still fail are recorded as
+            # infeasible (the §5 "where feasible" escape, reported honestly).
+            for cand in ("tests", "test", "jinja2/testsuite"):
+                if (wt / cand).is_dir():
+                    target = [cand]
+                    break
+            else:
+                target = ["--ignore=examples", "--ignore=docs", "--ignore=artwork"]
             start = time.monotonic()
             try:
                 proc = subprocess.run(
-                    [str(py), "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider"],
+                    [str(py), "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider",
+                     "-W", "ignore::DeprecationWarning",
+                     "-W", "ignore::PendingDeprecationWarning",
+                     *target],
                     cwd=wt, env=env, capture_output=True, text=True,
                     timeout=SUITE_TIMEOUT_S,
                 )
