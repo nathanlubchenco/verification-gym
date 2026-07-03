@@ -17,3 +17,7 @@
 - **Dead end (important):** first §14.1 canary gate FAILED at 21/24 (87.5%). Diagnosis: eq_to_neq and big_constant canary ops are MUT-grade subtle, and two misses landed in test files; a third was found-but-mislocalized (D9 rule working as designed). Fix: canary ops restricted to invert_if/return_none, test/example files excluded; purge + regenerate + re-review → 24/24 PASS. Metric definitions untouched (rule 2).
 - Null test: 6/30 clean items flagged (20% FP on this sample) — machinery sane; the level itself is a Phase 5 result.
 - SZZ + GEN arm modules written and unit-tested ahead of their phases. Spend: $6.12.
+
+- **Phase 2 (MUT) complete:** 242 items (50/50/50/45/47) — all classes ≥ floor, no LOW-POWER flags. Two guard bugs caught by tests along the way: AST-equality alone misses string-literal mutations (added tokenize span check); equivalent-mutant trap documented. Leakcheck green over 796 payloads.
+- **Phase 4 (SZZ) started in parallel** (pydriller reads only, safe next to MUT worktrees): precision filters P1-P3, LLM post-hoc labels; 91 items at last check, target 150.
+- **Phase 3 (GEN) launched:** 6 per-class processes, no carrier reuse within class (cross-class reuse allowed — clustering noted for LIMITATIONS), suite-rejection gate against carrier baselines in per-repo venvs (worktree shadowing site-packages via PYTHONPATH). Attempt budget 120/class keeps worst-case spend in forecast.
