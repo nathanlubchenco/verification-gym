@@ -209,43 +209,63 @@ def _repo_speed_order(conn) -> dict[str, float]:
 
 
 def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
+                 only_class: str | None = None,
                  progress=print) -> dict[str, int]:
+    """Generate GEN defects. With only_class set, restrict to that class —
+    this is the unit of process-level parallelism (one process per class).
+    Carrier reuse: never within a class (tracked via defect_records +
+    gen_attempts), allowed across classes (logged in LIMITATIONS: clustered
+    carriers, not leakage — items are still reviewed blind and independently)."""
     from ..generate import _carriers, add_defect_record, add_review_item
 
-    rng = random.Random(f"{cfg.seed}:gen")
-    made = {k: 0 for k in GEN_CLASSES}
+    classes = [only_class] if only_class else GEN_CLASSES
+    rng = random.Random(f"{cfg.seed}:gen:{only_class or 'all'}")
+    made = {k: 0 for k in classes}
     for row in conn.execute(
             "SELECT d.class k, COUNT(*) c FROM defect_records d JOIN review_items i"
             " ON i.defect_id=d.defect_id WHERE d.arm='GEN' GROUP BY 1"):
         if row["k"] in made:
             made[row["k"]] = row["c"]
-    attempts = {k: 0 for k in GEN_CLASSES}
+    attempts = {k: 0 for k in classes}
     for row in conn.execute("SELECT class k, COUNT(*) c FROM gen_attempts GROUP BY 1"):
         if row["k"] in attempts:
             attempts[row["k"]] = row["c"]
-    budget = {k: MAX_ATTEMPTS_PER_CLASS_FACTOR * n_per_class for k in GEN_CLASSES}
+    budget = {k: MAX_ATTEMPTS_PER_CLASS_FACTOR * n_per_class for k in classes}
+
+    # per-class no-reuse: skip carriers already attempted/used by these classes
+    used_by_class: dict[str, set[str]] = {k: set() for k in classes}
+    q_marks = ",".join("?" for _ in classes)
+    for row in conn.execute(
+            f"SELECT class k, sha FROM gen_attempts WHERE class IN ({q_marks})",
+            classes):
+        if row["k"] in used_by_class:
+            used_by_class[row["k"]].add(row["sha"])
+    for row in conn.execute(
+            f"SELECT class k, carrier_sha sha FROM defect_records"
+            f" WHERE arm='GEN' AND class IN ({q_marks})", classes):
+        if row["k"] in used_by_class and row["sha"]:
+            used_by_class[row["k"]].add(row["sha"])
 
     speed = _repo_speed_order(conn)
-    carriers = sorted(_carriers(conn, "GEN_CARRIER"),
-                      key=lambda r: (speed.get(r["repo"], 999.0), r["repo"], r["sha"]))
+    carriers = list(conn.execute(
+        "SELECT * FROM commit_pool WHERE assigned_to='GEN_CARRIER'"
+        " ORDER BY repo, sha").fetchall())
     rng.shuffle(carriers)
     carriers.sort(key=lambda r: speed.get(r["repo"], 999.0))
-    carrier_iter = iter(carriers)
     test_carriers = [c for c in carriers
                      if any(is_test_file(f) and f.endswith(".py")
                             for f in json.loads(c["files_json"]))]
-    test_iter = iter(test_carriers)
-    used_shas: set[tuple[str, str]] = set()
+    iters = {k: iter(test_carriers if k == "GEN-03" else carriers)
+             for k in classes}
 
     def next_carrier(klass):
-        it = test_iter if klass == "GEN-03" else carrier_iter
-        for c in it:
-            if (c["repo"], c["sha"]) not in used_shas:
+        for c in iters[klass]:
+            if c["sha"] not in used_by_class[klass]:
                 return c
         return None
 
     while True:
-        need = [k for k in GEN_CLASSES
+        need = [k for k in classes
                 if made[k] < n_per_class and attempts[k] < budget[k]]
         if not need:
             break
@@ -256,7 +276,7 @@ def generate_gen(cfg: Config, conn: sqlite3.Connection, n_per_class: int,
             progress(f"gen: no carriers left for {klass}; stopping that class")
             budget[klass] = attempts[klass]  # exhausted
             continue
-        used_shas.add((carrier["repo"], carrier["sha"]))
+        used_by_class[klass].add(carrier["sha"])
         attempts[klass] += 1
         repo, sha = carrier["repo"], carrier["sha"]
         repo_dir = cfg.root / cfg.data_dir / "repos" / repo
