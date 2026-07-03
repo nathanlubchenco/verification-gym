@@ -172,10 +172,14 @@ def run_reviews(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
 
 
 def run_reviews_batch(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
-                      batch_transport=None, progress=print) -> dict[str, Any]:
+                      batch_transport=None, item_ids: list[str] | None = None,
+                      progress=print) -> dict[str, Any]:
     """Batched variant of run_reviews (D17): same prompts/protocol at 50%
     token pricing. Two batch passes: reviews, then re-asks for malformed."""
     rows = conn.execute("SELECT * FROM review_items ORDER BY item_id").fetchall()
+    if item_ids is not None:
+        wanted = set(item_ids)
+        rows = [r for r in rows if r["item_id"] in wanted]
     done = {r["item_id"] for r in conn.execute(
         "SELECT item_id FROM verdicts WHERE run_id=?", (run_id,))}
     rows = [r for r in rows if r["item_id"] not in done]
