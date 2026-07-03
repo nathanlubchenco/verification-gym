@@ -1,8 +1,8 @@
 # Verification Gym REPORT
 
-Generated: 2026-07-03T18:46:20.815417+00:00
+Generated: 2026-07-03T21:58:31.479781+00:00
 
-run_id: `main` · seed: 20260702 · verifier: `claude-opus-4-8` · generator: `claude-opus-4-8` · cumulative spend: $77.99
+run_id: `main` · seed: 20260702 · verifier: `claude-opus-4-8` · generator: `claude-opus-4-8` · cumulative spend: $103.49
 
 ## MEASURED (computed numbers; §7 pre-specified)
 
