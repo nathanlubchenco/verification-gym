@@ -142,14 +142,17 @@ class ItemResult:
     prompt_hash: str
     ts: str
     provenance: dict
+    verifier_model: str | None = None   # from the verdict row, not config
+    generator_model: str | None = None  # from injection_method, not config
 
 
 def collect(cfg: Config, conn: sqlite3.Connection, run_id: str) -> list[ItemResult]:
     rows = conn.execute(
         """SELECT i.item_id, i.repo, i.defective, v.verdict_json, v.abstained,
                   v.tokens_in, v.tokens_out, v.latency_ms, v.cost_usd,
-                  v.prompt_hash, v.created_at,
-                  d.arm, d.class AS klass, d.ground_truth_locations, d.provenance
+                  v.prompt_hash, v.created_at, v.verifier_model,
+                  d.arm, d.class AS klass, d.ground_truth_locations, d.provenance,
+                  d.injection_method
            FROM verdicts v
            JOIN review_items i ON i.item_id = v.item_id
            LEFT JOIN defect_records d ON d.defect_id = i.defect_id
@@ -170,6 +173,10 @@ def collect(cfg: Config, conn: sqlite3.Connection, run_id: str) -> list[ItemResu
             latency_ms=r["latency_ms"] or 0, cost_usd=r["cost_usd"] or 0.0,
             prompt_hash=r["prompt_hash"] or "", ts=r["created_at"],
             provenance=json.loads(r["provenance"]) if r["provenance"] else {},
+            verifier_model=r["verifier_model"],
+            generator_model=(r["injection_method"].removeprefix("gen:")
+                             if (r["injection_method"] or "").startswith("gen:")
+                             else None),
         ))
     return results
 
@@ -299,8 +306,11 @@ def emit_events(cfg: Config, conn: sqlite3.Connection, run_id: str,
                 "schema": EVENT_SCHEMA,
                 "ts": r.ts, "run_id": run_id, "repo": r.repo,
                 "item_id": r.item_id, "arm": r.arm, "class": r.klass,
-                "generator_model": cfg.generator_model if r.arm == "GEN" else None,
-                "verifier_model": cfg.verifier_model,
+                # labels come from the run's own records — never from config,
+                # which may differ at emit time (regression: see test_score
+                # labeling-invariant test; bug found by external audit)
+                "generator_model": r.generator_model,
+                "verifier_model": r.verifier_model,
                 "verdict": r.verdict,
                 "ground_truth": {"defective": r.defective, "class": r.klass},
                 "outcome": r.outcome,

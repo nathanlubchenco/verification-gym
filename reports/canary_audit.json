@@ -1,0 +1,1391 @@
+{
+ "main": {
+  "detected": 24,
+  "items": [
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 352,
+      "file": "requests/sessions.py",
+      "start_line": 352
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-0b7c770910",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "Broken functionality - method returns None instead of performing DELETE request",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 352,
+       "file": "requests/sessions.py",
+       "start_line": 349
+      }
+     ],
+     "rationale": "The delete() method was changed to `return None` instead of `return self.request('DELETE', url, **kwargs)`. This completely breaks the DELETE HTTP method functionality, which is unrelated to the stated cookie persistence fix. This is a clear defect that would cause all delete() calls to do nothing and return None.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 30,
+      "file": "attr/_funcs.py",
+      "start_line": 30
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-1ba015dc92",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "Broken return value in fields()",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 30,
+       "file": "attr/_funcs.py",
+       "start_line": 30
+      }
+     ],
+     "rationale": "The fields() function now returns None instead of copy.deepcopy(attrs). This breaks asdict/validate which iterate over fields() (iterating None raises TypeError), and breaks the test_fields/test_copies tests. The intended PR change is only the list recursion; the fields() return being changed to None is an unrelated defect.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 942,
+      "file": "src/attr/_make.py",
+      "start_line": 942
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-2c157c50b6",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "Logic inversion bug disguised as docs change",
+     "confidence": 96.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 943,
+       "file": "src/attr/_make.py",
+       "start_line": 942
+      }
+     ],
+     "rationale": "The PR is labeled 'docs: fix markup' but it changes runtime logic: `if match:` was changed to `if not (match):`. This is in `_create_slots_class`, where the closure cell rewriting fixes references to the original class after cloning for slots. Originally, when a cell's contents IS the original class (match=True), it should be rewritten to the new class. The inverted condition now rewrites cells that do NOT reference the original class and skips those that do, breaking `super()`/`__class__` in slotted classes. This is unrelated to the stated docs change and introduces a functional defect.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 45,
+      "file": "requests/sessions.py",
+      "start_line": 45
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-3672f8f26e",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "inverted conditional logic",
+     "confidence": 96.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 46,
+       "file": "requests/sessions.py",
+       "start_line": 45
+      }
+     ],
+     "rationale": "The change inverts the condition in merge_kwargs. The docstring and intent state that keys set to None should be removed. Original code `if v is None: del kwargs[k]` correctly deletes None-valued keys. The new code `if not (v is None)` deletes keys that are NOT None, which is the exact opposite of the intended behavior \u2014 it removes all real values and keeps None-valued keys. The patch fix (adding self) is legitimate, but this logic inversion is a serious defect.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 14,
+      "file": "setup.py",
+      "start_line": 14
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-36f0e221b0",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "logic inversion",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 14,
+       "file": "setup.py",
+       "start_line": 14
+      }
+     ],
+     "rationale": "The condition was changed from `sys.argv[-1] == 'publish'` to `not (sys.argv[-1] == 'publish')`, inverting the logic. Now the publish/upload block runs for every normal invocation (e.g. sdist/install) and does NOT run when 'publish' is actually passed. This breaks normal setup.py usage and the publish workflow, unrelated to the described version-extraction change.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 215,
+      "file": "requests/cookies.py",
+      "start_line": 215
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-49e98cceed",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "incorrect return value / logic error",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 215,
+       "file": "requests/cookies.py",
+       "start_line": 215
+      }
+     ],
+     "rationale": "The PR claims to only 'fix typo' but also changed the values() method to `return None` instead of `return values`, breaking the dict-like values() interface which should return a list of cookie values.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 178,
+      "file": "requests/sessions.py",
+      "start_line": 178
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-555a6ded07",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "Logic inversion bug (unrelated to PR intent)",
+     "confidence": 96.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 178,
+       "file": "requests/sessions.py",
+       "start_line": 178
+      }
+     ],
+     "rationale": "The PR description says it only removes an un-needed resolve_redirects call, but the diff also inverts the fragment-handling condition. Original: `if parsed.fragment == '' and previous_fragment:` sets the previous fragment when the new URL has no fragment. Changed to `if not (parsed.fragment == '' and previous_fragment):` which inverts the logic, applying the fragment replacement in the wrong cases and breaking RFC 7231 fragment propagation on redirects. This is a hidden defect unrelated to the stated change.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 150,
+      "file": "click/_winconsole.py",
+      "start_line": 150
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-58eb76c4a5",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "Inverted conditional logic",
+     "confidence": 92.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 150,
+       "file": "click/_winconsole.py",
+       "start_line": 150
+      }
+     ],
+     "rationale": "The diff changes `if errno == ERROR_SUCCESS:` to `if not (errno == ERROR_SUCCESS):`, inverting the condition. Now the 'ERROR_SUCCESS' string is returned when errno is NOT ERROR_SUCCESS (i.e., when there's an actual error), and non-success errors like ERROR_NOT_ENOUGH_MEMORY are unreachable when errno==ERROR_SUCCESS. This is an unrelated, incorrect change not mentioned in the PR description and produces wrong error messages.",
+     "severity": "med"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 1971,
+      "file": "src/click/core.py",
+      "start_line": 1971
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-5ba749bfe4",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "logic-inversion",
+     "confidence": 96.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 1971,
+       "file": "src/click/core.py",
+       "start_line": 1971
+      }
+     ],
+     "rationale": "The change inverts the condition in Option.get_default for non-bool flags from 'if param.name == self.name and param.default' to 'if not (...)'. This is unrelated to the PR's stated purpose (removing deprecated callback style) and breaks default resolution for flag groups: it returns flag_value for the wrong (non-matching/non-default) params instead of the intended default flag.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 114,
+      "file": "click/decorators.py",
+      "start_line": 114
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-71dbd5745b",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "Logic error / functional regression",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 114,
+       "file": "click/decorators.py",
+       "start_line": 114
+      }
+     ],
+     "rationale": "The PR is described as a docstring fix but also changes the `command` decorator's inner function to `return None` instead of `return _make_command(f, name, attrs, cls)`. This breaks the core `command` decorator, causing every command-decorated function to become None, which is a critical unrelated regression.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 1010,
+      "file": "src/attr/_make.py",
+      "start_line": 1010
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-72eb8dbed7",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "Incorrect return value / broken decorator",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 1010,
+       "file": "src/attr/_make.py",
+       "start_line": 1010
+      }
+     ],
+     "rationale": "The change replaced `return builder.build_class()` with `return None` inside the `wrap` function of the `attrs` decorator. This means every class decorated with `@attr.s` will be replaced by `None`, completely breaking the library. This is unrelated to the stated fix (the `!=` to `is not` change) and is clearly an inadvertently introduced defect.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 394,
+      "file": "src/click/_compat.py",
+      "start_line": 394
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-82bac5b46a",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "inverted conditional logic",
+     "confidence": 96.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 400,
+       "file": "src/click/_compat.py",
+       "start_line": 394
+      }
+     ],
+     "rationale": "In open_stream, the condition for returning stdout was changed from `if any(m in mode for m in ['w','a','x'])` to `if not (any(...))`. Originally write modes (w/a/x) returned stdout and read modes fell through to stdin. After the change, read modes return stdout and write modes return stdin \u2014 the stdin/stdout selection is inverted. Writing to '-' now yields stdin and reading from '-' yields stdout. This is unrelated to the stated PR purpose (removing WindowsChunkedWriter) and breaks core stream handling. The unrelated removal of `stream = src_func()` in _make_cached_stream_func is also suspicious but secondary.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 543,
+      "file": "src/jinja2/utils.py",
+      "start_line": 543
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-a607e1e4d4",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "Incorrect return value / broken method",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 543,
+       "file": "src/jinja2/utils.py",
+       "start_line": 543
+      }
+     ],
+     "rationale": "The diff changes LRUCache.values() to `return None` instead of `return [x[1] for x in self.items()]`. This is unrelated to the urlize refactor and breaks the values() method, which should return a list of all cached values. This appears to be an injected defect.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 27,
+      "file": "jinja2/testsuite/lexnparse.py",
+      "start_line": 27
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-ab857b7f6e",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "broken helper function / test infrastructure",
+     "confidence": 88.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 27,
+       "file": "jinja2/testsuite/lexnparse.py",
+       "start_line": 26
+      }
+     ],
+     "rationale": "The diff changed jinja_string_repr to return None for Python < 3.0, breaking test_string_escapes which does '{{ %s }}' % jinja_string_repr(char) \u2014 this would produce '{{ None }}' and fail. The original stripped the leading 'u' prefix from repr; returning None is clearly wrong. The PR title says 'failing testcase' but this helper corruption is a defect affecting existing tests.",
+     "severity": "med"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 38,
+      "file": "jinja2/compiler.py",
+      "start_line": 38
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-ae6c8a41b8",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "Inverted conditional logic",
+     "confidence": 97.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 42,
+       "file": "jinja2/compiler.py",
+       "start_line": 38
+      }
+     ],
+     "rationale": "The condition was changed from `if hasattr(dict, 'iteritems')` to `if not (hasattr(dict, 'iteritems'))`, which inverts the branch selection. On Python 2 (where dict has iteritems), it now incorrectly selects 'items' instead of 'iteritems', and on Python 3 it selects 'iteritems' instead of 'items'. On Python 3, dicts have no iteritems method, so generated code calling `.iteritems()` would raise AttributeError at runtime for the extends handling. This is a clear logic inversion defect. The comment explicitly states 2.x should use iteritems and 3.x should use items, confirming the original logic was correct.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 614,
+      "file": "requests/utils.py",
+      "start_line": 614
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-b722957840",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "logic-inversion",
+     "confidence": 97.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 614,
+       "file": "requests/utils.py",
+       "start_line": 614
+      }
+     ],
+     "rationale": "The PR is labeled a documentation fix but changes runtime logic in guess_json_utf. For UTF-16-BE the 1st and 3rd bytes are null, so the correct condition is 'sample[::2] == _null2'. Adding 'not' inverts the condition, causing incorrect JSON UTF encoding detection (utf-16-be would be returned for wrong inputs and utf-16-le detection is unreachable in normal cases). The doc changes themselves are fine, but this hidden logic change is a defect.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 631,
+      "file": "jinja/loaders.py",
+      "start_line": 631
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-be569c8887",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "incorrect return value / logic error causing template load failure",
+     "confidence": 96.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 631,
+       "file": "jinja/loaders.py",
+       "start_line": 631
+      }
+     ],
+     "rationale": "In BaseFunctionLoader.get_source, when the loader function returns a byte string (str), the code now returns None instead of decoding it to unicode. This discards valid template content, breaking template loading for any str-returning loader function. The change is unrelated to the documented MemcachedLoaderMixin change and appears to be a smuggled defect.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 829,
+      "file": "jinja2/compiler.py",
+      "start_line": 829
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-cb203f69cb",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "Inverted conditional logic",
+     "confidence": 96.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 829,
+       "file": "jinja2/compiler.py",
+       "start_line": 829
+      }
+     ],
+     "rationale": "The PR claims to 'fix error message' but the first hunk inverts the logic for the 'self' special variable. Originally `if 'self' in find_undeclared(...)` correctly sets up `l_self = TemplateReference(context)` only when 'self' is actually used (undeclared/accessed). The change to `if not ('self' in ...)` inverts this: now it defines l_self only when 'self' is NOT used, and fails to define it when 'self' IS used. This will cause NameError/undefined 'l_self' at runtime for templates using {{ self }}. The second hunk (error message wording) is legitimate, but the first hunk is a serious functional defect masquerading as a message fix.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 1783,
+      "file": "src/attr/_make.py",
+      "start_line": 1783
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-ccf5c410df",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "incorrect conditional / inverted logic",
+     "confidence": 97.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 1783,
+       "file": "src/attr/_make.py",
+       "start_line": 1783
+      }
+     ],
+     "rationale": "In _make_eq, the condition was changed from `if attrs:` to `if not (attrs):`, inverting the equality logic. This causes classes with attributes to `return True` (ignoring all fields in __eq__), and classes without attributes to attempt building an empty comparison tuple. This is a broken correctness bug in __eq__ generation, unrelated to the PR's stated goal of making virtual repr filenames unique.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 557,
+      "file": "requests/models.py",
+      "start_line": 557
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-cdfec87937",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "logic error / broken return value",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 557,
+       "file": "requests/models.py",
+       "start_line": 557
+      }
+     ],
+     "rationale": "The change in iter_content replaces 'return gen' with 'return None'. This means iter_content always returns None instead of the generator, breaking streaming, iter_lines (which iterates over iter_content and will raise TypeError iterating over None), content property, and __iter__. This is a clear functional defect unrelated to the stated purpose of the PR. Additionally, removing 'self.hooks = hooks' from Request.__init__ is harmless since hooks are already set via default_hooks/register_hook above, but the iter_content change is a critical bug.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 63,
+      "file": "requests/__init__.py",
+      "start_line": 63
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-d2dea24951",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "Logic error - inverted condition",
+     "confidence": 92.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 64,
+       "file": "requests/__init__.py",
+       "start_line": 63
+      }
+     ],
+     "rationale": "The change from `if len(urllib3_version) == 2:` to `if not (len(urllib3_version) == 2):` inverts the logic. Originally, when urllib3 reports only 2 version parts (e.g., '16.1'), a '0' patch is appended to make it 3 parts for the subsequent 3-tuple unpacking. Now the '0' is appended only when the length is NOT 2. This means a 2-part version won't get padded (causing ValueError on `major, minor, patch = urllib3_version`), and a 3-part version will get a 4th element appended (also causing ValueError). This is unrelated to the stated PR purpose (charset_normalizer bounds) and breaks the version parsing.",
+     "severity": "med"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 52,
+      "file": "src/attr/filters.py",
+      "start_line": 52
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-e044680b03",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "Logic error / broken return value",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 52,
+       "file": "src/attr/filters.py",
+       "start_line": 52
+      }
+     ],
+     "rationale": "The exclude() function now returns None instead of the exclude_ callable, breaking the function entirely. The PR was supposed to only tweak docstrings but this changed 'return exclude_' to 'return None', which will cause callers to receive None instead of a filter callable, leading to TypeError when the filter is invoked.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 34,
+      "file": "conftest.py",
+      "start_line": 34
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-f2441e7483",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "Inverted conditional logic",
+     "confidence": 95.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 37,
+       "file": "conftest.py",
+       "start_line": 34
+      }
+     ],
+     "rationale": "The condition was changed from `if sys.version_info[:2] < (3, 6)` to `if not (sys.version_info[:2] < (3, 6))`, which inverts the logic. Now the annotation tests are ignored on Python 3.6+ (where they should run) and NOT ignored on Python < 3.6 (where they would fail because annotations aren't supported). This defeats the purpose of the PR to re-activate pypy3 annotations and breaks test collection on older Python versions.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 212,
+      "file": "attr/_make.py",
+      "start_line": 212
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-fbb559c8c2",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "Logic error / broken comparison methods",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 212,
+       "file": "attr/_make.py",
+       "start_line": 209
+      }
+     ],
+     "rationale": "The diff changed the inner helper `attrs_to_tuple` in `_add_cmp` to `return None` instead of `return _attrs_to_tuple(obj, attrs)`. This makes all comparison methods (__eq__, __lt__, __le__, __gt__, __ge__) compare None==None or None<None, so all instances of the same class compare equal (and ordering comparisons behave incorrectly). This is unrelated to the PR's stated purpose (fixing validator docs) and is a serious functional bug.",
+     "severity": "high"
+    },
+    "verifier_model": "claude-opus-4-8"
+   }
+  ],
+  "n": 24,
+  "rate": 1.0
+ },
+ "xm-gpt54mini": {
+  "detected": 14,
+  "items": [
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 352,
+      "file": "requests/sessions.py",
+      "start_line": 352
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-0b7c770910",
+    "outcome": "misdirected_flag",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "Session / SessionRedirectMixin",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 269,
+       "file": "requests/sessions.py",
+       "start_line": 265
+      },
+      {
+       "end_line": 75,
+       "file": "requests/sessions.py",
+       "start_line": 71
+      },
+      {
+       "end_line": 349,
+       "file": "requests/sessions.py",
+       "start_line": 349
+      }
+     ],
+     "rationale": "The patch removes cookie persistence from redirect handling but only adds it after the initial response in Session.request. This breaks cookies set on intermediate redirect responses: they will no longer be stored in the session before the next redirected request is built, so subsequent redirects and later requests can miss cookies that should have been persisted. Additionally, the DELETE method was changed to return None instead of issuing a request, which is an obvious functional regression unrelated to cookies.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 30,
+      "file": "attr/_funcs.py",
+      "start_line": 30
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-1ba015dc92",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "functional regression in fields() / asdict()",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 31,
+       "file": "attr/_funcs.py",
+       "start_line": 21
+      }
+     ],
+     "rationale": "`fields(cl)` now returns `None` instead of the copied attrs list. This breaks every caller that relies on iterating over or indexing the returned fields, including `asdict`, `validate`, and any external API users. As a result, `asdict(inst)` will fail immediately when it does `for a in attrs:` because `attrs` is `None`. The accompanying list-recursion change cannot function correctly because the program is already broken by this regression.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 942,
+      "file": "src/attr/_make.py",
+      "start_line": 942
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-2c157c50b6",
+    "outcome": "missed",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": null,
+     "confidence": 98.0,
+     "defect_found": false,
+     "locations": [],
+     "rationale": "The changes are documentation/markup fixes in the make_class docstring and a logically equivalent negation rewrite in the closure-cell update condition. `if not (match):` is identical to `if not match:` and should not affect behavior.",
+     "severity": null
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 45,
+      "file": "requests/sessions.py",
+      "start_line": 45
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-3672f8f26e",
+    "outcome": "misdirected_flag",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "Session",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 36,
+       "file": "requests/sessions.py",
+       "start_line": 34
+      },
+      {
+       "end_line": 215,
+       "file": "requests/sessions.py",
+       "start_line": 215
+      }
+     ],
+     "rationale": "The merge_kwargs logic is inverted: it now deletes keys whose local value is not None instead of deleting keys set to None. This breaks normal session/request kwarg merging by stripping user-supplied values and preserving None values. Additionally, Session.patch still passes data='' to self.request instead of the method's data argument, so PATCH requests will ignore the caller-provided body and send an empty payload.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 14,
+      "file": "setup.py",
+      "start_line": 14
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-36f0e221b0",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "build/install packaging script bug",
+     "confidence": 92.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 16,
+       "file": "setup.py",
+       "start_line": 13
+      },
+      {
+       "end_line": 33,
+       "file": "setup.py",
+       "start_line": 32
+      }
+     ],
+     "rationale": "The condition is inverted: `if not (sys.argv[-1] == 'publish')` now runs `python setup.py sdist upload` and exits for every command except `publish`, which prevents normal setup operations from working. Additionally, the version extraction changed from a safe line-by-line match with an explicit fallback check to an unconditional `re.search(...).group(1)`, which will raise an AttributeError if the version string is missing or formatted unexpectedly, making the script less robust.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 215,
+      "file": "requests/cookies.py",
+      "start_line": 215
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-49e98cceed",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "RequestsCookieJar.values",
+     "confidence": 100.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 217,
+       "file": "requests/cookies.py",
+       "start_line": 212
+      }
+     ],
+     "rationale": "The change replaces the return value of RequestsCookieJar.values() from the collected list of cookie values to None. This breaks the documented dict-like behavior and will cause callers expecting a list/iterable of values to fail or receive incorrect results.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 178,
+      "file": "requests/sessions.py",
+      "start_line": 178
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-555a6ded07",
+    "outcome": "missed",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": null,
+     "confidence": 96.0,
+     "defect_found": false,
+     "locations": [],
+     "rationale": "The change is safe and improves behavior by avoiding an unnecessary call to resolve_redirects when redirects are not being followed. The other tweak in fragment handling preserves the intended fragment propagation logic while avoiding overwriting an existing parsed fragment. No defect is introduced.",
+     "severity": null
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 150,
+      "file": "click/_winconsole.py",
+      "start_line": 150
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-58eb76c4a5",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "logic error / resource management",
+     "confidence": 93.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 151,
+       "file": "click/_winconsole.py",
+       "start_line": 147
+      },
+      {
+       "end_line": 276,
+       "file": "click/_winconsole.py",
+       "start_line": 273
+      }
+     ],
+     "rationale": "The change introduces a broken error-message helper and an unsafe cleanup path. In _get_error_message(), the condition was inverted: `if not (errno == ERROR_SUCCESS)` now returns `'ERROR_SUCCESS'` for every error except success, and falls through on success, so console write failures will report misleading messages. In `_get_windows_argv()`, `CommandLineToArgvW` is checked for NULL and then always freed with `LocalFree`, but the ctypes signature for `LocalFree` is declared as returning `c_void_p` instead of the required handle type and the function is called unconditionally in `finally`; if the pointer is invalid or the call raises, the cleanup path can itself fail. The most serious defect is the inverted error-message logic, which breaks diagnostics for Windows console I/O errors.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 1971,
+      "file": "src/click/core.py",
+      "start_line": 1971
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-5ba749bfe4",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "Breaking compatibility for existing 2-arg parameter callbacks; non-flag option default resolution also appears inverted",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 1684,
+       "file": "src/click/core.py",
+       "start_line": 1684
+      },
+      {
+       "end_line": 1974,
+       "file": "src/click/core.py",
+       "start_line": 1968
+      }
+     ],
+     "rationale": "The deprecated 2-argument callback style was previously still supported (with a warning). This patch removes the compatibility shim and now always calls callbacks as (ctx, param, value), so any existing callbacks defined as legacy 2-arg functions will raise TypeError at runtime. In addition, the Option.get_default change appears logically inverted: the new condition returns param.flag_value for the first non-matching parameter rather than when the current param matches and has a default, which can cause non-bool flag defaults to be resolved incorrectly.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 114,
+      "file": "click/decorators.py",
+      "start_line": 114
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-71dbd5745b",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "functional regression",
+     "confidence": 100.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 116,
+       "file": "click/decorators.py",
+       "start_line": 111
+      }
+     ],
+     "rationale": "The change in `command()` replaces the decorator body with `return None` instead of creating and returning a `Command` instance via `_make_command(...)`. This breaks every use of `@click.command`/`@click.group`, causing decorated functions to become `None` rather than commands. The docstring fix in `argument()` is fine, but the `command()` implementation change introduces a severe regression.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 1010,
+      "file": "src/attr/_make.py",
+      "start_line": 1010
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-72eb8dbed7",
+    "outcome": "misdirected_flag",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "functional regression",
+     "confidence": 92.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 1007,
+       "file": "src/attr/_make.py",
+       "start_line": 1007
+      }
+     ],
+     "rationale": "The `attrs()` decorator now returns `None` unconditionally instead of the built class. In the `@attr.s` / `@attrs()` usage path, `wrap()` must return either the decorated class or the class builder result; returning `None` breaks class decoration entirely. This appears to be an accidental merge error rather than part of the fix.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 394,
+      "file": "src/click/_compat.py",
+      "start_line": 394
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-82bac5b46a",
+    "outcome": "detected",
+    "repo": "click",
+    "verdict": {
+     "class_guess": "regression",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 398,
+       "file": "src/click/_compat.py",
+       "start_line": 394
+      },
+      {
+       "end_line": 604,
+       "file": "src/click/_compat.py",
+       "start_line": 599
+      }
+     ],
+     "rationale": "The change in open_stream reverses stdout/stderr handling for standard streams. Before, '-' returned stdout for non-write modes and stdin for write modes; after the negation, read modes now incorrectly return stdin and write modes return stdout, breaking normal behavior for '-' redirection. In _make_cached_stream_func, removing the local re-read of src_func() breaks the intended cache key update when wrapper_func() swaps the underlying stream, so cached wrappers can become stale or associated with the wrong stream.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 543,
+      "file": "src/jinja2/utils.py",
+      "start_line": 543
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-a607e1e4d4",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "Other",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 544,
+       "file": "src/jinja2/utils.py",
+       "start_line": 543
+      }
+     ],
+     "rationale": "The diff accidentally changes `LRUCache.values()` to return `None` instead of a list of values. This is a clear behavioral regression and will break any code expecting the documented mapping-like `values()` API.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 27,
+      "file": "jinja2/testsuite/lexnparse.py",
+      "start_line": 27
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-ab857b7f6e",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "Test suite regression / Python 2 compatibility break",
+     "confidence": 97.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 29,
+       "file": "jinja2/testsuite/lexnparse.py",
+       "start_line": 27
+      },
+      {
+       "end_line": 41,
+       "file": "jinja2/testsuite/lexnparse.py",
+       "start_line": 39
+      }
+     ],
+     "rationale": "The patch adds a new raw-block testcase, but it also changes `jinja_string_repr` for Python 2 from returning a valid repr slice to returning `None`. That helper is used by `test_string_escapes` to build template source; on Python 2 this will make the test format `{{ %s }}` with `None`, producing invalid/unintended input and breaking the existing test suite rather than just adding coverage for `raw`.",
+     "severity": "med"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 38,
+      "file": "jinja2/compiler.py",
+      "start_line": 38
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-ae6c8a41b8",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "Compilation/runtime logic error in loop/test handling",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 42,
+       "file": "jinja2/compiler.py",
+       "start_line": 38
+      },
+      {
+       "end_line": 168,
+       "file": "jinja2/compiler.py",
+       "start_line": 159
+      },
+      {
+       "end_line": 921,
+       "file": "jinja2/compiler.py",
+       "start_line": 909
+      }
+     ],
+     "rationale": "The dict iteration feature probe is inverted: on Python 3, `hasattr(dict, 'iteritems')` is false, so the new condition assigns `dict_item_iter = 'iteritems'` instead of `'items'`, breaking generated code that later calls `parent_template.blocks.iteritems()`. More importantly, the loop test handling now reuses `loop_frame` directly instead of a copied frame, but the deleted `Frame.inspect()` stub and the added comment indicate this path was intended to use a separate soft frame for if-statement-style test evaluation. Reusing the live loop frame can leak test-time symbol modifications into the loop body/analysis, causing incorrect code generation for loops with `if` filters, especially around variable tracking and extended loops.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 614,
+      "file": "requests/utils.py",
+      "start_line": 614
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-b722957840",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "incorrect logic / regression in UTF-16 BOM-less JSON encoding detection",
+     "confidence": 97.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 616,
+       "file": "requests/utils.py",
+       "start_line": 611
+      }
+     ],
+     "rationale": "The change inverts the UTF-16 big-endian detection condition in guess_json_utf(). Previously it correctly returned 'utf-16-be' when bytes 0 and 2 were null (sample[::2] == _null2). After the patch, it returns 'utf-16-be' when that pattern is NOT present, which will misclassify many inputs and break JSON decoding for BOM-less UTF-16BE data.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 631,
+      "file": "jinja/loaders.py",
+      "start_line": 631
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-be569c8887",
+    "outcome": "detected",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": "BaseFunctionLoader",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 630,
+       "file": "jinja/loaders.py",
+       "start_line": 626
+      }
+     ],
+     "rationale": "The change breaks FunctionLoader/BaseFunctionLoader completely: when the loader function returns a string, get_source() now returns None instead of the template source (previously it decoded and returned the string). This causes the caller to treat valid templates as missing or later fail during parsing, so any FunctionLoader returning a string/unicode will stop working.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 829,
+      "file": "jinja2/compiler.py",
+      "start_line": 829
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-cb203f69cb",
+    "outcome": "missed",
+    "repo": "jinja2",
+    "verdict": {
+     "class_guess": null,
+     "confidence": 98.0,
+     "defect_found": false,
+     "locations": [],
+     "rationale": "The first hunk is a semantic no-op: `if 'self' in ...` was inverted to `if not ('self' in ...)`, which preserves the original behavior of adding `self` only when it is not already undeclared. The second hunk only changes an error message string. No functional defect is introduced.",
+     "severity": null
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 1783,
+      "file": "src/attr/_make.py",
+      "start_line": 1783
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-ccf5c410df",
+    "outcome": "misdirected_flag",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "Equality generation bug",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 1921,
+       "file": "src/attr/_make.py",
+       "start_line": 1897
+      }
+     ],
+     "rationale": "The condition in `_make_eq` was inverted from `if attrs:` to `if not (attrs):`. As written, classes with one or more comparable attributes now generate `return True` unconditionally, making all instances of the same class compare equal. For classes with no comparable attributes, the function falls through and emits invalid/empty tuple-comparison code. This is a severe behavioral regression, not just the intended repr filename fix.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 557,
+      "file": "requests/models.py",
+      "start_line": 557
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-cdfec87937",
+    "outcome": "detected",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": "Response.iter_content / Request.__init__",
+     "confidence": 98.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 558,
+       "file": "requests/models.py",
+       "start_line": 555
+      },
+      {
+       "end_line": 209,
+       "file": "requests/models.py",
+       "start_line": 209
+      }
+     ],
+     "rationale": "The change breaks core behavior in two places. In Request.__init__, removing `self.hooks = hooks` means `RequestHooksMixin.register_hook()`/`prepare_hooks()` still rely on hooks, but the Request object no longer stores any hook mapping before registration, so custom hooks are lost or may fail during request preparation. In Response.iter_content, replacing `return gen` with `return None` makes `iter_content()` stop yielding any response body data. Since `iter_lines()` and `content` both depend on `iter_content()`, this effectively breaks response streaming and reading response content throughout the library.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 63,
+      "file": "requests/__init__.py",
+      "start_line": 63
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-d2dea24951",
+    "outcome": "missed",
+    "repo": "requests",
+    "verdict": {
+     "class_guess": null,
+     "confidence": 95.0,
+     "defect_found": false,
+     "locations": [],
+     "rationale": "The change consistently relaxes charset_normalizer support from <3 to <4 in both runtime compatibility checks and package metadata. The urllib3 length-check edit is functionally equivalent: it still appends a patch component whenever the version string does not already have 3 segments, preserving the intended behavior. No defect is introduced.",
+     "severity": null
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 52,
+      "file": "src/attr/filters.py",
+      "start_line": 52
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-e044680b03",
+    "outcome": "misdirected_flag",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "functional regression / incorrect return value",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 49,
+       "file": "src/attr/filters.py",
+       "start_line": 49
+      }
+     ],
+     "rationale": "The change accidentally replaces `return exclude_` with `return None`, so `exclude(*what)` no longer returns a callable filter. Any code or tests using `exclude()` will break at runtime with a `TypeError` when the returned value is called. This is a functional defect unrelated to the docstring-only intent.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 34,
+      "file": "conftest.py",
+      "start_line": 34
+     }
+    ],
+    "injection_method": "invert_if",
+    "item_id": "it-f2441e7483",
+    "outcome": "misdirected_flag",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "compatibility/regression",
+     "confidence": 93.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 29,
+       "file": "conftest.py",
+       "start_line": 22
+      }
+     ],
+     "rationale": "The old logic intentionally skipped `tests/test_annotations.py` only on PyPy3 because those tests were known to fail there. The new condition removes the PyPy-specific exclusion entirely and instead skips both annotation-related tests for all Python >= 3.6. This changes test coverage behavior and will re-enable `tests/test_annotations.py` on PyPy3, likely reintroducing the previously known failure (or, conversely, unnecessarily disabling `tests/test_init_subclass.py` everywhere). Either way, the conditional is not equivalent to the original intent and introduces a regression in test selection.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   },
+   {
+    "ground_truth_locations": [
+     {
+      "end_line": 212,
+      "file": "attr/_make.py",
+      "start_line": 212
+     }
+    ],
+    "injection_method": "return_none",
+    "item_id": "it-fbb559c8c2",
+    "outcome": "detected",
+    "repo": "attrs",
+    "verdict": {
+     "class_guess": "attr comparison methods (__eq__/__lt__/etc.)",
+     "confidence": 99.0,
+     "defect_found": true,
+     "locations": [
+      {
+       "end_line": 211,
+       "file": "attr/_make.py",
+       "start_line": 209
+      }
+     ],
+     "rationale": "The change replaces the tuple conversion helper used by all generated comparison methods with `return None`. As a result, `__eq__`, `__lt__`, `__le__`, `__gt__`, and `__ge__` will compare `None` values instead of attribute tuples, breaking ordering and equality for all attrs classes with comparison enabled. This is a functional regression, not a docs-only fix.",
+     "severity": "high"
+    },
+    "verifier_model": "gpt-5.4-mini-2026-03-17"
+   }
+  ],
+  "n": 24,
+  "rate": 0.5833333333333334
+ }
+}

@@ -68,3 +68,63 @@ def test_bootstrap_gap_ci_seeded_and_sane():
     assert delta == pytest.approx(0.5)
     assert lo < 0.5 < hi
     assert (delta, lo, hi) == bootstrap_gap_ci(gen, szz, seed=1)  # deterministic
+
+
+def test_event_labels_come_from_run_records_not_config(tmp_path, monkeypatch):
+    """Regression (found by external audit): events must label verifier/generator
+    from the run's own records; config at emit time may be a different model."""
+    import json
+    import subprocess
+
+    from gym import db as dbmod
+    from gym import generate
+    from gym.config import Config, ModelPrice, Targets
+    from gym.review import run_reviews
+    from gym.score import collect, emit_events
+
+    cfg = Config(
+        seed=7, generator_model="gen-model-x", verifier_model="ver-model-x",
+        spend_cap_usd=5.0, data_dir="data", events_dir="events",
+        reports_dir="reports", payload_budget_chars=100000,
+        targets=Targets(1, 1, 0.4),
+        pricing={"ver-model-x": ModelPrice(5.0, 25.0)}, repos=[], root=tmp_path,
+    )
+    # reuse the fixture repo builder inline
+    repo = tmp_path / "src-repo"
+    repo.mkdir()
+    for args in (["init", "-q", "-b", "main"], ["config", "user.email", "t@e.c"],
+                 ["config", "user.name", "T"]):
+        subprocess.run(["git", "-C", str(repo), *args], check=True)
+    (repo / "m.py").write_text("def f(a, b):\n    if a < b:\n        return a\n    return b\n")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "feat: add f",
+                    "--date", "2020-01-01T00:00:00"], check=True,
+                   env={**__import__("os").environ,
+                        "GIT_COMMITTER_DATE": "2020-01-01T00:00:00"})
+    dest = tmp_path / "data" / "repos" / "fx"
+    dest.parent.mkdir(parents=True)
+    subprocess.run(["git", "clone", "-q", str(repo), str(dest)], check=True)
+
+    conn = dbmod.connect(cfg.db_path)
+    conn.execute("INSERT INTO repos (name, url, validated) VALUES ('fx','local',1)")
+    conn.commit()
+    generate.ensure_pool(cfg, conn, quota_per_repo=5, progress=lambda *a: None)
+    generate.assign_pool(cfg, conn, want={"CLEAN": 1})
+    generate.generate_clean(cfg, conn, n=1, progress=lambda *a: None)
+
+    class T:
+        def complete(self, **kw):
+            return {"text": json.dumps({"defect_found": False, "confidence": 9,
+                                        "locations": [], "class_guess": None,
+                                        "severity": None, "rationale": ""}),
+                    "tokens_in": 10, "tokens_out": 5, "latency_ms": 1}
+
+    run_reviews(cfg, conn, "r", transport=T(), progress=lambda *a: None)
+
+    # emit under a DIFFERENT config (simulates emitting after a model switch)
+    cfg2 = Config(**{**cfg.__dict__, "verifier_model": "other-model",
+                     "generator_model": "other-gen"})
+    out = emit_events(cfg2, conn, "r", collect(cfg2, conn, "r"))
+    event = json.loads(out.read_text().splitlines()[0])
+    assert event["verifier_model"] == "ver-model-x"   # from the run, not cfg2
+    assert event["generator_model"] is None           # clean item: no generator

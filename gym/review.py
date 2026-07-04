@@ -156,10 +156,11 @@ def run_reviews(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
         conn.execute(
             "INSERT OR REPLACE INTO verdicts (item_id, run_id, raw_response,"
             " verdict_json, abstained, tokens_in, tokens_out, latency_ms,"
-            " cost_usd, prompt_hash) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            " cost_usd, prompt_hash, verifier_model) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (row["item_id"], run_id, raw,
              None if abstained else json.dumps(verdict, sort_keys=True),
-             int(abstained), tokens_in, tokens_out, latency, cost, ph),
+             int(abstained), tokens_in, tokens_out, latency, cost, ph,
+             cfg.verifier_model),
         )
         conn.commit()
         summary["reviewed"] += 1
@@ -217,7 +218,8 @@ def run_reviews_batch(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
             partial[item_id] = (r.tokens_in, r.tokens_out, r.cost_usd)
             continue
         _persist_verdict(conn, item_id, run_id, r.text, verdict, False,
-                         r.tokens_in, r.tokens_out, 0, r.cost_usd, r.prompt_hash)
+                         r.tokens_in, r.tokens_out, 0, r.cost_usd, r.prompt_hash,
+                         cfg.verifier_model)
         summary["reviewed"] += 1
         summary["cost_usd"] += r.cost_usd
 
@@ -239,7 +241,7 @@ def run_reviews_batch(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
             abstained = verdict is None
             _persist_verdict(conn, item_id, run_id, r2.text, verdict, abstained,
                              t_in + r2.tokens_in, t_out + r2.tokens_out, 0,
-                             cost + r2.cost_usd, r2.prompt_hash)
+                             cost + r2.cost_usd, r2.prompt_hash, cfg.verifier_model)
             summary["reviewed"] += 1
             summary["abstained"] += int(abstained)
             summary["cost_usd"] += cost + r2.cost_usd
@@ -247,13 +249,15 @@ def run_reviews_batch(cfg: Config, conn: sqlite3.Connection, run_id: str, *,
 
 
 def _persist_verdict(conn, item_id, run_id, raw, verdict, abstained,
-                     tokens_in, tokens_out, latency_ms, cost, prompt_hash):
+                     tokens_in, tokens_out, latency_ms, cost, prompt_hash,
+                     verifier_model):
     conn.execute(
         "INSERT OR REPLACE INTO verdicts (item_id, run_id, raw_response,"
         " verdict_json, abstained, tokens_in, tokens_out, latency_ms,"
-        " cost_usd, prompt_hash) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        " cost_usd, prompt_hash, verifier_model) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (item_id, run_id, raw,
          None if verdict is None else json.dumps(verdict, sort_keys=True),
-         int(abstained), tokens_in, tokens_out, latency_ms, cost, prompt_hash),
+         int(abstained), tokens_in, tokens_out, latency_ms, cost, prompt_hash,
+         verifier_model),
     )
     conn.commit()

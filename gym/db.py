@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS verdicts (
     tokens_in INTEGER, tokens_out INTEGER,
     latency_ms INTEGER, cost_usd REAL,
     prompt_hash TEXT,
+    verifier_model TEXT,         -- the model that actually produced this verdict
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (item_id, run_id)
 );
@@ -109,6 +110,15 @@ def connect(db_path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=30000")
     conn.executescript(SCHEMA)
+    # lightweight migrations for pre-existing databases
+    for stmt in (
+        "ALTER TABLE verdicts ADD COLUMN verifier_model TEXT",
+        "ALTER TABLE gen_attempts ADD COLUMN generator TEXT",
+    ):
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError:
+            pass  # column already exists
     return conn
 
 
